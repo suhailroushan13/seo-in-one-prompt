@@ -1,13 +1,20 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useState, useEffect } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Mail, ArrowRight } from "lucide-react";
+import { Mail, ArrowRight, FileText } from "lucide-react";
+import { loadPendingPrompt } from "@/lib/formStorage";
 
 function SuccessContent() {
   const searchParams = useSearchParams();
   const email = searchParams.get("email") ?? "";
+  const [hasPrompt, setHasPrompt] = useState(false);
+
+  useEffect(() => {
+    const pending = loadPendingPrompt();
+    setHasPrompt(!!pending?.prompt?.trim());
+  }, []);
 
   return (
     <div className="mx-auto max-w-md px-4 py-24 text-center">
@@ -23,13 +30,24 @@ function SuccessContent() {
           </span>
         )}
       </p>
-      <Link
-        href="/"
-        className="mt-8 inline-flex items-center gap-2 rounded-xl bg-foreground px-5 py-3 text-sm font-medium text-background transition-opacity hover:opacity-90"
-      >
-        Back to Generator
-        <ArrowRight className="h-4 w-4" aria-hidden />
-      </Link>
+      <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+        {hasPrompt && (
+          <Link
+            href="/prompt/view"
+            className="inline-flex items-center gap-2 rounded-xl border border-border bg-transparent px-5 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+          >
+            <FileText className="h-4 w-4" aria-hidden />
+            View Prompt
+          </Link>
+        )}
+        <Link
+          href="/"
+          className="inline-flex items-center gap-2 rounded-xl bg-foreground px-5 py-3 text-sm font-medium text-background transition-opacity hover:opacity-90"
+        >
+          Back to Generator
+          <ArrowRight className="h-4 w-4" aria-hidden />
+        </Link>
+      </div>
     </div>
   );
 }
