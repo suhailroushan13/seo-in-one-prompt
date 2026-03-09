@@ -54,11 +54,12 @@ export function saveFormToStorage(form: FormState): void {
   }
 }
 
-/** Pending prompt + name + email saved when user clicks Submit (before payment). Used on success page to send email. */
+/** Pending prompt + name + email + brand saved when user clicks Submit (before payment). Used on success page to send email. */
 export interface PendingPromptData {
   prompt: string;
   fullName: string;
   email: string;
+  brandName: string;
 }
 
 export function savePendingPrompt(data: PendingPromptData): void {
@@ -81,6 +82,7 @@ export function loadPendingPrompt(): PendingPromptData | null {
       prompt: String(parsed.prompt),
       fullName: String(parsed.fullName ?? ""),
       email: String(parsed.email).trim().toLowerCase(),
+      brandName: String(parsed.brandName ?? ""),
     };
   } catch {
     return null;

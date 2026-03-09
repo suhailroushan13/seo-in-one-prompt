@@ -4,6 +4,8 @@
 
 You can configure **only one redirect URL** in Dodo. Use the URL below for both success and failure; the page shows the right message based on the `status` query parameter.
 
+**Note:** If Dodo redirects to the home page with payment query params (e.g. `/?status=succeeded&email=...`), the app redirects **instantly** to `/payment/result` via server middleware so the user never sees the home page. For the best experience, configure Dodo to redirect directly to `https://seopromptai.com/payment/result?...` with the same query params.
+
 ---
 
 ## The one URL to add in Dodo
@@ -96,5 +98,5 @@ The page will treat a missing `status` as failure and show “Payment unsuccessf
 
 ## What the user sees
 
-- **Success** (`status=success`): “Check your email — we’ve sent you the prompt” and, if provided, “Sent to **email**”.
+- **Success** (`status=success`): “Payment received” and “Check your inbox” — the SEO prompt is sent to the customer’s email as a **PDF** attachment. The attachment filename is `{UserName}-{BrandName}-seo-prompt.pdf` (e.g. `John-Doe-Zomato-seo-prompt.pdf`).
 - **Failure** (`status=failure` or no `status`): “Payment unsuccessful” plus a reason (cancelled, failed, declined, expired).

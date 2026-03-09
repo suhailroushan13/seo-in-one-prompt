@@ -6,6 +6,7 @@ export interface IPendingPrompt {
   email: string;
   prompt: string;
   name?: string;
+  brandName?: string;
   createdAt: Date;
 }
 
@@ -16,6 +17,7 @@ const schema = new Schema<IPendingPromptDocument>(
     email: { type: String, required: true, lowercase: true, trim: true },
     prompt: { type: String, required: true },
     name: { type: String, trim: true },
+    brandName: { type: String, trim: true },
     createdAt: { type: Date, default: Date.now },
   },
   { timestamps: false }

@@ -5,8 +5,8 @@ import { getAndDeletePendingPrompt } from "@/lib/pendingPromptStore";
 import { sendPromptEmail } from "@/lib/sendPromptEmail";
 
 /**
- * Single endpoint for payment success: fetches pending prompt (with name),
- * records payment in MongoDB (including name), and sends HTML email with MD attachment.
+ * Single endpoint for payment success: fetches pending prompt (with name, brandName),
+ * records payment in MongoDB (including name), and sends HTML email with PDF attachment.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -20,6 +20,7 @@ export async function POST(request: NextRequest) {
       name: nameFromBody,
       fullName: fullNameFromBody,
       prompt: promptFromBody,
+      brandName: brandNameFromBody,
     } = body as {
       email?: string;
       status?: string;
@@ -29,6 +30,7 @@ export async function POST(request: NextRequest) {
       name?: string;
       fullName?: string;
       prompt?: string;
+      brandName?: string;
     };
 
     const isSuccess = /^(success|succeeded|paid|completed)$/i.test(status ?? "");
@@ -47,21 +49,41 @@ export async function POST(request: NextRequest) {
     }
 
     const key = email.trim().toLowerCase();
+    const paymentIdTrimmed = payment_id && String(payment_id).trim() ? String(payment_id).trim() : undefined;
+
+    await connectDB();
+
+    // Idempotency: if we already processed this payment (same payment_id), do not record again or send email again
+    if (paymentIdTrimmed) {
+      const existing = await PaymentRecord.findOne({ paymentId: paymentIdTrimmed });
+      if (existing) {
+        return NextResponse.json({
+          ok: true,
+          sent: true,
+          name: existing.name ?? undefined,
+        });
+      }
+    }
+
     const promptInBody = typeof promptFromBody === "string" && promptFromBody.trim().length > 0;
 
-    // 1) Get prompt + name: from request body (localStorage) or from server pending store
+    // 1) Get prompt + name + brandName: from request body (localStorage) or from server pending store
     let promptToSend: string | null = null;
     let nameToUse: string | undefined;
+    let brandToUse: string | undefined;
     if (promptInBody) {
       promptToSend = promptFromBody.trim();
       nameToUse = (fullNameFromBody ?? nameFromBody) && String(fullNameFromBody ?? nameFromBody).trim() || undefined;
+      brandToUse = brandNameFromBody && String(brandNameFromBody).trim() || undefined;
     } else {
       const pending = await getAndDeletePendingPrompt(key);
       if (pending) {
         promptToSend = pending.prompt;
         nameToUse = pending.name || nameFromBody?.trim() || undefined;
+        brandToUse = pending.brandName?.trim() || brandNameFromBody?.trim() || undefined;
       } else {
         nameToUse = nameFromBody?.trim() || undefined;
+        brandToUse = brandNameFromBody?.trim() || undefined;
         console.warn(`[payment/complete] No pending prompt for email: ${key} (and no prompt in body).`);
       }
     }
@@ -79,22 +101,34 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid amount" }, { status: 400 });
     }
 
-    await connectDB();
-    await PaymentRecord.create({
-      name: nameToUse,
-      email: key,
-      paymentTime: new Date(),
-      amount: numAmount,
-      currency: currency && String(currency).trim() ? String(currency).trim() : "USD",
-      paymentId: payment_id && String(payment_id).trim() ? String(payment_id).trim() : undefined,
-    });
+    try {
+      await PaymentRecord.create({
+        name: nameToUse,
+        email: key,
+        paymentTime: new Date(),
+        amount: numAmount,
+        currency: currency && String(currency).trim() ? String(currency).trim() : "USD",
+        paymentId: paymentIdTrimmed,
+      });
+    } catch (err: unknown) {
+      // Race: another request already created this payment (unique index on paymentId)
+      const isDup = err && typeof err === "object" && "code" in err && (err as { code?: number }).code === 11000;
+      if (isDup && paymentIdTrimmed) {
+        return NextResponse.json({
+          ok: true,
+          sent: true,
+          name: nameToUse ?? undefined,
+        });
+      }
+      throw err;
+    }
 
-    // 3) Send HTML email with MD attachment (if we have a prompt)
+    // 3) Send HTML email with PDF attachment (if we have a prompt) — only once per payment_id (checked above)
     let sent = false;
     let sendError: string | undefined;
     if (promptToSend) {
       try {
-        await sendPromptEmail(key, promptToSend, nameToUse);
+        await sendPromptEmail(key, promptToSend, nameToUse, brandToUse);
         sent = true;
       } catch (err) {
         sendError = err instanceof Error ? err.message : "Send failed";

@@ -27,6 +27,20 @@ function formatAmount(amount: number, currency = "USD") {
   }).format(amount);
 }
 
+/** Returns the webmail inbox URL for the given email, or Gmail as default. */
+function getInboxUrl(email: string): string {
+  const domain = email.split("@")[1]?.toLowerCase() ?? "";
+  if (domain === "gmail.com" || domain === "googlemail.com")
+    return "https://mail.google.com/mail/u/0/#inbox";
+  if (["outlook.com", "hotmail.com", "live.com", "msn.com", "hotmail.co.uk", "live.co.uk"].includes(domain))
+    return "https://outlook.live.com/mail/0/inbox";
+  if (domain.startsWith("yahoo."))
+    return "https://mail.yahoo.com/";
+  if (["icloud.com", "me.com", "mac.com"].includes(domain))
+    return "https://www.icloud.com/mail";
+  return "https://mail.google.com/mail/u/0/#inbox";
+}
+
 function PaymentResultContent() {
   const searchParams = useSearchParams();
   const status = searchParams.get("status") ?? "failure";
@@ -58,7 +72,11 @@ function PaymentResultContent() {
       amount: searchParams.get("amount") ? Number(searchParams.get("amount")) : undefined,
       currency: searchParams.get("currency")?.trim() || "USD",
       ...(useStorage
-        ? { prompt: pendingFromStorage!.prompt.trim(), fullName: pendingFromStorage!.fullName }
+        ? {
+            prompt: pendingFromStorage!.prompt.trim(),
+            fullName: pendingFromStorage!.fullName,
+            brandName: pendingFromStorage!.brandName ?? "",
+          }
         : {}),
     };
     fetch("/api/payment/complete", {
@@ -84,7 +102,7 @@ function PaymentResultContent() {
     const amount = amountParam ? Number(amountParam) : undefined;
     const currency = searchParams.get("currency")?.trim() || "USD";
     const displayTime = paymentTime ?? new Date();
-    const mailto = email ? `mailto:${email}` : "mailto:";
+    const inboxUrl = getInboxUrl(email);
 
     return (
       <div className="mx-auto max-w-md px-4 py-24 text-center">
@@ -108,7 +126,7 @@ function PaymentResultContent() {
         </p>
         <p className="mt-4 text-muted-foreground">
           {emailSent === true
-            ? "We've sent your SEO prompt to your email as an attachment."
+            ? "We've sent your SEO prompt to your email as a PDF attachment."
             : emailSent === false
               ? emailSentReason === "no_pending_prompt"
                 ? "To receive the prompt by email, use the generator first: enter your name and email, generate your prompt, then click Submit before paying. The prompt is saved when you click Submit and is sent after payment."
@@ -155,7 +173,9 @@ function PaymentResultContent() {
 
         <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
           <a
-            href={mailto}
+            href={inboxUrl}
+            target="_blank"
+            rel="noopener noreferrer"
             className="inline-flex h-11 min-w-[44px] items-center justify-center gap-2 rounded-xl bg-foreground px-5 py-3 text-sm font-medium text-background shadow-md transition-opacity hover:opacity-90"
           >
             <Inbox className="h-4 w-4 shrink-0" aria-hidden />

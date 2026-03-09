@@ -27,7 +27,7 @@ const schema = new Schema<IPaymentRecordDocument>(
 );
 
 schema.index({ email: 1, paymentTime: -1 });
-schema.index({ paymentId: 1 }, { sparse: true });
+schema.index({ paymentId: 1 }, { unique: true, sparse: true });
 
 export const PaymentRecord: Model<IPaymentRecordDocument> =
   (mongoose.models?.PaymentRecord as Model<IPaymentRecordDocument>) ??

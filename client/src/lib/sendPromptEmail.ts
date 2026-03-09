@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import { buildPromptPdf } from "./pdfPrompt";
 
 const FROM = process.env.GMAIL_OWNER ?? process.env.OWNER_EMAIL;
 const SITE_NAME = process.env.SITE_NAME ?? "SEO Prompt AI";
@@ -24,21 +25,29 @@ function getHtmlTemplate(name: string | undefined, filename: string): string {
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Your SEO prompt from ${SITE_NAME}</title>
 </head>
-<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #f5f5f5; padding: 32px 16px;">
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); min-height: 100vh;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="min-height: 100vh; padding: 40px 20px;">
     <tr>
-      <td align="center">
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 560px; background-color: #ffffff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); overflow: hidden;">
+      <td align="center" style="vertical-align: top;">
+        <table role="presentation" cellspacing="0" cellpadding="0" style="max-width: 520px; width: 100%; background: #ffffff; border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.04); overflow: hidden;">
           <tr>
-            <td style="padding: 32px 32px 24px;">
-              <h1 style="margin: 0 0 8px; font-size: 22px; font-weight: 700; color: #111;">Your SEO prompt is ready</h1>
-              <p style="margin: 0; font-size: 15px; color: #444; line-height: 1.5;">${greeting}</p>
-              <p style="margin: 16px 0 0; font-size: 15px; color: #444; line-height: 1.5;">Your generated SEO prompt is attached as a Markdown file (<strong>${filename}</strong>). Download the attachment and use it with your AI or dev team to implement the full SEO setup.</p>
+            <td style="padding: 40px 36px 32px;">
+              <div style="width: 48px; height: 48px; background: linear-gradient(135deg, #0f172a 0%, #334155 100%); border-radius: 12px; margin-bottom: 24px;"></div>
+              <h1 style="margin: 0 0 8px; font-size: 24px; font-weight: 700; color: #0f172a; letter-spacing: -0.02em;">Your SEO prompt is ready</h1>
+              <p style="margin: 0; font-size: 16px; color: #475569; line-height: 1.6;">${greeting}</p>
+              <p style="margin: 20px 0 0; font-size: 15px; color: #475569; line-height: 1.65;">Your generated SEO prompt is attached as a <strong>PDF</strong> (<strong>${filename}</strong>). Open the attachment to view your full prompt and use it with your AI or dev team to implement the SEO setup.</p>
+              <table role="presentation" cellspacing="0" cellpadding="0" style="margin-top: 28px;">
+                <tr>
+                  <td style="padding: 14px 20px; background: #f1f5f9; border-radius: 10px;">
+                    <p style="margin: 0; font-size: 13px; color: #64748b;">📎 Attachment: <strong style="color: #334155;">${filename}</strong></p>
+                  </td>
+                </tr>
+              </table>
             </td>
           </tr>
           <tr>
-            <td style="padding: 0 32px 24px;">
-              <p style="margin: 0; font-size: 14px; color: #666;">— ${SITE_NAME}</p>
+            <td style="padding: 0 36px 32px;">
+              <p style="margin: 0; font-size: 14px; color: #94a3b8;">— ${SITE_NAME}</p>
             </td>
           </tr>
         </table>
@@ -52,24 +61,26 @@ function getHtmlTemplate(name: string | undefined, filename: string): string {
 export async function sendPromptEmail(
   to: string,
   prompt: string,
-  name?: string
+  name?: string,
+  brandName?: string
 ): Promise<void> {
   const transporter = getTransporter();
-  const date = new Date().toISOString().slice(0, 10);
-  const filename = `seo-prompt-${date}.md`;
+  const userName = (name ?? "").trim() || "User";
+  const brand = (brandName ?? "").trim() || "Project";
+  const { buffer, filename } = await buildPromptPdf(prompt, userName, brand);
   const html = getHtmlTemplate(name, filename);
 
   await transporter.sendMail({
     from: FROM,
     to,
     subject: `Your SEO prompt from ${SITE_NAME}`,
-    text: `Your generated SEO prompt is attached as a Markdown file (${filename}).\n\n— ${SITE_NAME}`,
+    text: `Your generated SEO prompt is attached as a PDF (${filename}). Open the attachment to view your full prompt.\n\n— ${SITE_NAME}`,
     html,
     attachments: [
       {
         filename,
-        content: Buffer.from(prompt, "utf-8"),
-        contentType: "text/markdown",
+        content: buffer,
+        contentType: "application/pdf",
       },
     ],
   });

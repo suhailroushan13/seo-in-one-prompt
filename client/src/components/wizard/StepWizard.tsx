@@ -605,35 +605,35 @@ export function StepWizard({ form, update, onGenerate }: StepWizardProps) {
         </div>
       </StepPanel>
 
-      {/* Navigation */}
-      <div className="flex items-center justify-between gap-3 pt-2">
+      {/* Navigation — stacked on mobile, row on sm+ */}
+      <div className="flex flex-col gap-3 pt-4 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:pt-2">
         <button
           type="button"
           onClick={() => goTo(currentStep - 1)}
           disabled={currentStep <= 1}
-          className="inline-flex h-10 items-center gap-2 rounded-xl border border-border px-4 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
+          className="order-2 sm:order-1 inline-flex h-12 min-h-12 w-full min-w-0 items-center justify-center gap-2 rounded-xl border border-border px-4 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-40 touch-manipulation sm:h-10 sm:w-auto"
         >
-          <ArrowLeft className="h-4 w-4" />
+          <ArrowLeft className="h-4 w-4 shrink-0" />
           Back
         </button>
 
-        <div className="flex items-center gap-2">
+        <div className="order-1 flex flex-col gap-2 sm:order-2 sm:flex-row sm:gap-2">
           {currentStep < 4 && (
             <button
               type="button"
               onClick={handleContinue}
-              className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-transparent px-5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+              className="inline-flex h-12 min-h-12 w-full min-w-0 items-center justify-center gap-2 rounded-xl border border-border bg-transparent px-5 text-sm font-medium text-foreground transition-colors hover:bg-muted touch-manipulation sm:h-10 sm:w-auto"
             >
               Continue
-              <ArrowRight className="h-4 w-4" />
+              <ArrowRight className="h-4 w-4 shrink-0" />
             </button>
           )}
           <button
             type="button"
             onClick={handleGenerate}
-            className="inline-flex h-10 items-center gap-2 rounded-xl bg-foreground px-5 text-sm font-medium text-background shadow-lg shadow-foreground/10 transition-all hover:opacity-90 hover:shadow-xl"
+            className="inline-flex h-12 min-h-12 w-full min-w-0 items-center justify-center gap-2 rounded-xl bg-foreground px-5 text-sm font-medium text-background shadow-lg shadow-foreground/10 transition-all hover:opacity-90 hover:shadow-xl touch-manipulation sm:h-10 sm:w-auto"
           >
-            <Sparkles className="h-4 w-4" />
+            <Sparkles className="h-4 w-4 shrink-0" />
             Generate SEO Prompt
           </button>
         </div>

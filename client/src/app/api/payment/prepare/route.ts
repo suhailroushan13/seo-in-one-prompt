@@ -4,13 +4,15 @@ import { setPendingPrompt } from "@/lib/pendingPromptStore";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { prompt, email, fullName, name } = body as {
+    const { prompt, email, fullName, name, brandName } = body as {
       prompt?: string;
       email?: string;
       fullName?: string;
       name?: string;
+      brandName?: string;
     };
     const nameForSchema = (fullName ?? name) && String(fullName ?? name).trim();
+    const brandForSchema = brandName && String(brandName).trim();
 
     if (!prompt || typeof prompt !== "string" || !prompt.trim()) {
       return NextResponse.json(
@@ -25,7 +27,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await setPendingPrompt(email.trim(), prompt.trim(), nameForSchema || undefined);
+    await setPendingPrompt(
+      email.trim(),
+      prompt.trim(),
+      nameForSchema || undefined,
+      brandForSchema || undefined
+    );
     return NextResponse.json({ ok: true });
   } catch {
     return NextResponse.json(

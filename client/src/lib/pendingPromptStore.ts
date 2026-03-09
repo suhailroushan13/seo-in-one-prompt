@@ -10,18 +10,28 @@ import { PendingPrompt } from "@/models/PendingPrompt";
 export interface PendingPromptData {
   prompt: string;
   name?: string;
+  brandName?: string;
 }
 
 export async function setPendingPrompt(
   email: string,
   prompt: string,
-  name?: string
+  name?: string,
+  brandName?: string
 ): Promise<void> {
   await connectDB();
   const key = email.toLowerCase().trim();
   await PendingPrompt.findOneAndUpdate(
     { email: key },
-    { $set: { email: key, prompt, name: name?.trim() || undefined, createdAt: new Date() } },
+    {
+      $set: {
+        email: key,
+        prompt,
+        name: name?.trim() || undefined,
+        brandName: brandName?.trim() || undefined,
+        createdAt: new Date(),
+      },
+    },
     { upsert: true, new: true }
   );
 }
@@ -33,5 +43,9 @@ export async function getAndDeletePendingPrompt(
   const key = email.toLowerCase().trim();
   const doc = await PendingPrompt.findOneAndDelete({ email: key });
   if (!doc) return null;
-  return { prompt: doc.prompt, name: doc.name };
+  return {
+    prompt: doc.prompt,
+    name: doc.name,
+    brandName: doc.brandName,
+  };
 }

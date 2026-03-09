@@ -86,10 +86,12 @@ export default function GeneratePage() {
     if (!generatedPrompt?.trim() || !email?.trim()) return;
     const trimmedEmail = email.trim();
     const trimmedName = fullName?.trim() ?? "";
+    const trimmedBrand = form.brandName?.trim() ?? "";
     savePendingPrompt({
       prompt: generatedPrompt.trim(),
       fullName: trimmedName,
       email: trimmedEmail,
+      brandName: trimmedBrand,
     });
     try {
       const res = await fetch("/api/payment/prepare", {
@@ -99,6 +101,7 @@ export default function GeneratePage() {
           prompt: generatedPrompt.trim(),
           email: trimmedEmail,
           fullName: trimmedName || undefined,
+          brandName: trimmedBrand || undefined,
         }),
       });
       if (!res.ok) {
@@ -124,30 +127,30 @@ export default function GeneratePage() {
 
   return (
     <div className="min-h-full">
-      <header className="border-b border-border/50 px-4 py-3 sm:px-6">
-        <div className="mx-auto flex max-w-3xl items-center justify-between gap-4">
+      <header className="border-b border-border/50 px-3 py-3 sm:px-6">
+        <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-2 sm:gap-4">
           <Link
             href="/"
-            className="inline-flex min-h-10 min-w-10 cursor-pointer items-center justify-center gap-2 rounded-lg px-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="inline-flex min-h-11 min-w-11 shrink-0 cursor-pointer items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring touch-manipulation"
             aria-label="Back to home"
           >
             <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden />
-            <span>Back to home</span>
+            <span className="hidden sm:inline">Back to home</span>
           </Link>
           <button
             type="button"
             onClick={handleClearAll}
-            className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-border bg-transparent px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center gap-2 rounded-lg border border-border bg-transparent px-3 py-2.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring touch-manipulation"
             aria-label="Clear all fields and local storage"
           >
             <Trash2 className="h-4 w-4 shrink-0" aria-hidden />
-            <span>Clear all fields</span>
+            <span className="hidden sm:inline">Clear all</span>
           </button>
         </div>
       </header>
 
       <section
-        className="px-4 pb-24 pt-8 sm:px-6"
+        className="px-3 pb-24 pt-6 sm:px-6 sm:pt-8"
         aria-label="Generate SEO prompt"
       >
         <div className="mx-auto max-w-2xl">
@@ -259,7 +262,7 @@ export default function GeneratePage() {
                     type="button"
                     onClick={handleSubmit}
                     disabled={!generatedPrompt?.trim() || !email?.trim()}
-                    className="inline-flex min-h-11 min-w-[44px] cursor-pointer items-center justify-center gap-2 rounded-xl bg-foreground px-5 py-3 text-sm font-medium text-background shadow-md transition-transform duration-200 hover:scale-[1.02] hover:opacity-90 hover:shadow-lg active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+                    className="w-full min-h-12 sm:w-auto sm:min-w-[44px] inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-foreground px-5 py-3 text-sm font-medium text-background shadow-md transition-transform duration-200 hover:scale-[1.02] hover:opacity-90 hover:shadow-lg active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 touch-manipulation"
                     aria-label="Proceed to next step"
                   >
                     <span>Submit</span>
