@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { Sun, Moon, HelpCircle } from "lucide-react";
+import { Sun, Moon, HelpCircle, BookOpen } from "lucide-react";
 
 export function Navbar() {
   const [dark, setDark] = useState(false);
@@ -49,6 +49,14 @@ export function Navbar() {
         </Link>
 
         <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+          <Link
+            href="/how"
+            className="cursor-pointer inline-flex min-h-9 min-w-9 items-center justify-center gap-1.5 rounded-lg px-2.5 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:px-3"
+            aria-label="How to use"
+          >
+            <BookOpen className="h-4 w-4 shrink-0" aria-hidden />
+            <span className="hidden sm:inline">How to use</span>
+          </Link>
           <Link
             href="/help"
             className="inline-flex min-h-9 min-w-9 items-center justify-center gap-1.5 rounded-lg px-2.5 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:px-3"

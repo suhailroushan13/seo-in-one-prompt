@@ -18,6 +18,14 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   compress: true,
+  async rewrites() {
+    return [
+      // Serve magnet icon for /favicon.ico so tab icon matches PNGs (magnet, not triangle)
+      { source: "/favicon.ico", destination: "/favicon-32x32.png" },
+      // Serve 96x96 desktop favicon (fallback: use 192px; add favicon-96x96.png to public to override)
+      { source: "/favicon-96x96.png", destination: "/android-chrome-192x192.png" },
+    ];
+  },
   images: {
     formats: ["image/avif", "image/webp"],
     deviceSizes: [640, 750, 828, 1080, 1200],

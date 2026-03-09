@@ -94,14 +94,20 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: "/favicon.ico", sizes: "any" },
-      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
-      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
-      { url: "/android-chrome-192x192.png", sizes: "192x192", type: "image/png" },
+      { url: "/favicon.svg", type: "image/svg+xml" },
+      { url: "/favicon-32x32.png?v=3", sizes: "32x32", type: "image/png" },
+      { url: "/favicon.ico?v=3", sizes: "any" },
+      { url: "/favicon-16x16.png?v=3", sizes: "16x16", type: "image/png" },
+      { url: "/favicon-96x96.png?v=3", sizes: "96x96", type: "image/png" },
+      { url: "/android-chrome-192x192.png?v=3", sizes: "192x192", type: "image/png" },
     ],
-    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
+    apple: [{ url: "/apple-touch-icon.png?v=3", sizes: "180x180" }],
   },
   manifest: "/site.webmanifest",
+  appleWebApp: {
+    capable: true,
+    title: "SEO Prompt",
+  },
 };
 
 export default function RootLayout({
@@ -116,6 +122,7 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <head>
+        <meta name="apple-mobile-web-app-title" content="SEO Prompt" />
         <script
           dangerouslySetInnerHTML={{
             __html: `(function(){var d=document.documentElement;var k=localStorage.getItem('theme');if(k==='dark'||(!k&&window.matchMedia('(prefers-color-scheme: dark)').matches))d.classList.add('dark');else d.classList.remove('dark');})();`,

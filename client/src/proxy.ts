@@ -5,7 +5,7 @@ import type { NextRequest } from "next/server";
  * When payment provider redirects to /?status=...&payment_id=...&email=...,
  * redirect to /payment/result immediately so the user never sees the home page.
  */
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   if (request.nextUrl.pathname !== "/") {
     return NextResponse.next();
   }

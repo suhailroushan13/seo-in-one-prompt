@@ -4,6 +4,7 @@ function v(value: string | undefined, fallback: string): string {
   return (value ?? "").trim() || fallback;
 }
 
+
 export function buildPrompt(s: FormState): string {
   const brand = v(s.brandName, "MyProject");
   const domain = v(s.domainName, "https://domain.com");

@@ -1,8 +1,9 @@
 import nodemailer from "nodemailer";
-import { buildPromptPdf } from "./pdfPrompt";
+import { generateSeoPromptReport } from "./pdfReport";
 
 const FROM = process.env.GMAIL_OWNER ?? process.env.OWNER_EMAIL;
 const SITE_NAME = process.env.SITE_NAME ?? "SEO Prompt AI";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://seoprompt.ai";
 
 function getTransporter() {
   const user = process.env.GMAIL_OWNER ?? process.env.OWNER_EMAIL;
@@ -34,7 +35,7 @@ function getHtmlTemplate(name: string | undefined, filename: string): string {
         <table role="presentation" cellspacing="0" cellpadding="0" style="max-width: 520px; width: 100%; background: #ffffff; border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.04); overflow: hidden;">
           <tr>
             <td style="padding: 40px 36px 32px;">
-              <div style="width: 48px; height: 48px; background: linear-gradient(135deg, #0f172a 0%, #334155 100%); border-radius: 12px; margin-bottom: 24px;"></div>
+              <img src="${SITE_URL}/favicon-32x32.png?v=3" alt="${SITE_NAME}" width="48" height="48" style="display: block; width: 48px; height: 48px; border-radius: 12px; margin-bottom: 24px;" />
               <h1 style="margin: 0 0 8px; font-size: 24px; font-weight: 700; color: #0f172a; letter-spacing: -0.02em;">Your SEO prompt is ready</h1>
               <p style="margin: 0; font-size: 16px; color: #475569; line-height: 1.6;">${greeting}</p>
               <p style="margin: 20px 0 0; font-size: 15px; color: #475569; line-height: 1.65;">Your generated SEO prompt is attached as a <strong>PDF</strong> (<strong>${filename}</strong>). Open the attachment to view your full prompt and use it with your AI or dev team to implement the SEO setup.</p>
@@ -50,6 +51,15 @@ function getHtmlTemplate(name: string | undefined, filename: string): string {
           <tr>
             <td style="padding: 0 36px 32px;">
               <p style="margin: 0; font-size: 14px; color: #94a3b8;">— ${SITE_NAME}</p>
+            </td>
+          </tr>
+        </table>
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-top: 24px;">
+          <tr>
+            <td align="center" style="padding: 16px 20px;">
+              <p style="margin: 0; font-size: 12px; color: #94a3b8; letter-spacing: 0.02em;">
+                Sent from <a href="${SITE_URL}" style="color: #64748b; text-decoration: none; font-weight: 500;">${new URL(SITE_URL).hostname}</a>
+              </p>
             </td>
           </tr>
         </table>
@@ -77,11 +87,16 @@ export async function sendPromptEmail(
   const userName = (name ?? "").trim() || "User";
   const brand = (brandName ?? "").trim() || "Project";
   
-  console.log("[sendPromptEmail] Building PDF...");
+  console.log("[sendPromptEmail] Building PDF report...");
   let buffer: Buffer;
   let filename: string;
   try {
-    const result = await buildPromptPdf(prompt, userName, brand);
+    const result = await generateSeoPromptReport({
+      prompt,
+      fullName: userName,
+      email: to,
+      brandName: brand,
+    });
     buffer = result.buffer;
     filename = result.filename;
     console.log("[sendPromptEmail] PDF generated: yes", { filename, bufferSize: buffer.length });
