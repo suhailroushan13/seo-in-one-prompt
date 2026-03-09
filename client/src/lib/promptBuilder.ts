@@ -85,6 +85,8 @@ e) HTTPS enforced.
 ══════════════════════════════════════════
 <title>${pageTitleVal}</title>
 <meta name="description" content="${metaDescVal}" />
+<meta name="author" content="${brand}" />
+<link rel="author" href="${domain}" />
 OG/Twitter: title, description, image (${ogImageVal}), url ${domain}
 Favicon and manifest. JSON-LD WebSite schema.
 
@@ -123,6 +125,8 @@ Child pages under /blog/ linking back to pillar.
 ══════════════════════════════════════════
 FINAL DELIVERABLES
 ══════════════════════════════════════════
+**The above was the pre-code spec and requirements for SEO. Implement everything and deliver the post-code so the project has a complete, production-ready SEO setup.**
+
 1. Complete <head> (meta, OG, Twitter, favicons, JSON-LD)
 2. robots.txt
 3. sitemap.xml
@@ -133,5 +137,8 @@ FINAL DELIVERABLES
 8. Performance checklist
 9. Analytics integration
 
-Do NOT skip any step. Real code only — no placeholders.${s.extraNotes ? `\n\nSPECIAL REQUIREMENTS:\n${s.extraNotes}` : ""}`;
+Do NOT skip any step. Real code only — no placeholders.
+
+**Contact:** suhailroushan13@gmail.com
+${s.extraNotes ? `\n\nSPECIAL REQUIREMENTS:\n${s.extraNotes}` : ""}`;
 }

@@ -30,6 +30,18 @@ export const metadata: Metadata = {
     description:
       "Learn what each form field means with examples and defaults for the SEO prompt generator.",
     url: "/help",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "SEO Prompt Generator — One prompt, full SEO plan",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    images: ["/og-image.png"],
   },
 };
 

@@ -4,12 +4,12 @@ import Link from "next/link";
 export const metadata: Metadata = {
   title: "Pricing",
   description:
-    "Free to start generating SEO prompts. Upgrade for unlimited prompts and advanced features.",
+    "Get started with SEO Prompt Generator. AI-powered and instant. Upgrade for unlimited prompts and advanced features.",
   alternates: { canonical: "/pricing" },
   openGraph: {
     title: "Pricing | SEO Prompt Generator",
     description:
-      "Free to start generating SEO prompts. Upgrade for unlimited prompts and advanced features.",
+      "Get started with SEO Prompt Generator. AI-powered and instant. Upgrade for unlimited prompts and advanced features.",
     url: "/pricing",
   },
 };
@@ -19,7 +19,7 @@ export default function PricingPage() {
     <div className="mx-auto max-w-3xl px-4 py-24 text-center">
       <h1 className="text-3xl font-bold tracking-tight">Pricing</h1>
       <p className="mt-4 text-muted-foreground">
-        Free to start. Upgrade for unlimited prompts and advanced features. Coming soon.
+        Get started with SEO Prompt Generator. AI-powered and instant. Upgrade for unlimited prompts and advanced features. Coming soon.
       </p>
       <Link
         href="/"

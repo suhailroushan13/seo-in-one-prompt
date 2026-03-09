@@ -44,7 +44,7 @@ export function Footer() {
           </nav>
           <div className="space-y-1">
             <p className="text-sm text-muted-foreground">
-              Free tool to generate SEO prompts. No sign-up, no tracking.
+              Best tool to generate SEO prompts. No sign-up, no tracking.
             </p>
             <p className="text-sm text-muted-foreground">
               Built by{" "}
