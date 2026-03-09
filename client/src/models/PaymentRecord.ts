@@ -7,6 +7,8 @@ export interface IPaymentRecord {
   amount?: number;
   currency?: string;
   paymentId?: string;
+  /** Full prompt submitted by the user (stored at payment completion). */
+  prompt?: string;
 }
 
 export interface IPaymentRecordDocument extends IPaymentRecord, Document {
@@ -22,6 +24,7 @@ const schema = new Schema<IPaymentRecordDocument>(
     amount: { type: Number },
     currency: { type: String, default: "USD" },
     paymentId: { type: String, trim: true },
+    prompt: { type: String },
   },
   { timestamps: true }
 );

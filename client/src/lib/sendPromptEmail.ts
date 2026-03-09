@@ -113,13 +113,13 @@ export async function sendPromptEmail(
     console.error("[sendPromptEmail] SMTP error details:", {
       message: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,
-      // @ts-ignore - nodemailer errors have these properties
+      // @ts-expect-error - nodemailer errors have these properties
       code: error?.code,
-      // @ts-ignore
+      // @ts-expect-error - nodemailer error shape
       command: error?.command,
-      // @ts-ignore
+      // @ts-expect-error - nodemailer error shape
       response: error?.response,
-      // @ts-ignore
+      // @ts-expect-error - nodemailer error shape
       responseCode: error?.responseCode,
     });
     throw error;

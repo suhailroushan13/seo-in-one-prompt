@@ -11,12 +11,14 @@ export async function POST(request: NextRequest) {
       payment_id,
       amount,
       currency,
+      prompt,
     } = body as {
       name?: string;
       email?: string;
       payment_id?: string;
       amount?: number | string;
       currency?: string;
+      prompt?: string;
     };
 
     if (!email || typeof email !== "string" || !email.trim()) {
@@ -51,6 +53,7 @@ export async function POST(request: NextRequest) {
       amount: numAmount,
       currency: currency && String(currency).trim() ? String(currency).trim() : "USD",
       paymentId: payment_id && String(payment_id).trim() ? String(payment_id).trim() : undefined,
+      prompt: prompt && String(prompt).trim() ? String(prompt).trim() : undefined,
     });
 
     return NextResponse.json({ ok: true });

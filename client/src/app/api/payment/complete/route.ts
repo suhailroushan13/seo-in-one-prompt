@@ -120,6 +120,7 @@ export async function POST(request: NextRequest) {
         amount: numAmount,
         currency: currency && String(currency).trim() ? String(currency).trim() : "USD",
         paymentId: paymentIdTrimmed,
+        prompt: promptToSend && promptToSend.trim().length > 0 ? promptToSend.trim() : undefined,
       });
     } catch (err: unknown) {
       // Race: another request already created this payment (unique index on paymentId)

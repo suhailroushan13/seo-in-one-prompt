@@ -34,7 +34,7 @@ export function Hero() {
         </p>
 
         <div className="mt-10 flex flex-nowrap items-center justify-center gap-3 sm:gap-6">
-          {steps.map((step, i) => {
+          {steps.map((step) => {
             const Icon = step.icon;
             return (
               <div key={step.label} className="flex flex-col items-center gap-1.5">

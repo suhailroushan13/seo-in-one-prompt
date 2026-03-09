@@ -34,8 +34,8 @@ function PaymentResultContent() {
   const completeCalledRef = useRef(false);
   const [paymentTime, setPaymentTime] = useState<Date | null>(null);
   const [storedName, setStoredName] = useState<string | null>(null);
-  const [emailSent, setEmailSent] = useState<boolean | null>(null);
-  const [emailSentReason, setEmailSentReason] = useState<string | null>(null);
+  const [, setEmailSent] = useState<boolean | null>(null);
+  const [, setEmailSentReason] = useState<string | null>(null);
 
   // Record payment + send email: use prompt/name from localStorage (saved when user clicked Submit), or fallback to server pending
   useEffect(() => {
