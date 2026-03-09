@@ -15,7 +15,7 @@ import {
   clearFormAndUserStorage,
   savePendingPrompt,
 } from "@/lib/formStorage";
-import { ArrowLeft, ArrowRight, Trash2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Trash2, Loader2 } from "lucide-react";
 
 const NEXT_STEP_URL = "https://dodo.pe/seopromptai";
 
@@ -27,6 +27,7 @@ export default function GeneratePage() {
   const [email, setEmail] = useState("");
   const [generatedPrompt, setGeneratedPrompt] = useState("");
   const [showResult, setShowResult] = useState(false);
+  const [isRedirecting, setIsRedirecting] = useState(false);
 
   useEffect(() => {
     setForm(loadFormFromStorage());
@@ -84,6 +85,7 @@ export default function GeneratePage() {
 
   const handleSubmit = async () => {
     if (!generatedPrompt?.trim() || !email?.trim()) return;
+    setIsRedirecting(true);
     const trimmedEmail = email.trim();
     const trimmedName = fullName?.trim() ?? "";
     const trimmedBrand = form.brandName?.trim() ?? "";
@@ -107,13 +109,14 @@ export default function GeneratePage() {
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         alert(data?.error ?? "Could not save prompt. Try again.");
+        setIsRedirecting(false);
         return;
       }
+      window.location.href = NEXT_STEP_URL;
     } catch {
       alert("Could not save prompt. Try again.");
-      return;
+      setIsRedirecting(false);
     }
-    window.location.href = NEXT_STEP_URL;
   };
 
   const handleClearAll = useCallback(() => {
@@ -234,7 +237,7 @@ export default function GeneratePage() {
                       type="text"
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
-                      placeholder="e.g. Rahul"
+                      placeholder="e.g. John Doe"
                       className="h-10 w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30"
                       autoComplete="name"
                     />
@@ -261,12 +264,21 @@ export default function GeneratePage() {
                   <button
                     type="button"
                     onClick={handleSubmit}
-                    disabled={!generatedPrompt?.trim() || !email?.trim()}
+                    disabled={!generatedPrompt?.trim() || !email?.trim() || isRedirecting}
                     className="w-full min-h-12 sm:w-auto sm:min-w-[44px] inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-foreground px-5 py-3 text-sm font-medium text-background shadow-md transition-transform duration-200 hover:scale-[1.02] hover:opacity-90 hover:shadow-lg active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 touch-manipulation"
-                    aria-label="Proceed to next step"
+                    aria-label={isRedirecting ? "Redirecting to payment" : "Proceed to next step"}
                   >
-                    <span>Submit</span>
-                    <ArrowRight className="h-4 w-4 shrink-0" aria-hidden />
+                    {isRedirecting ? (
+                      <>
+                        <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
+                        <span>Redirecting…</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>Submit</span>
+                        <ArrowRight className="h-4 w-4 shrink-0" aria-hidden />
+                      </>
+                    )}
                   </button>
                 </div>
               </section>

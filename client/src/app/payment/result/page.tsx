@@ -125,15 +125,7 @@ function PaymentResultContent() {
           Success
         </p>
         <p className="mt-4 text-muted-foreground">
-          {emailSent === true
-            ? "We've sent your SEO prompt to your email as a PDF attachment."
-            : emailSent === false
-              ? emailSentReason === "no_pending_prompt"
-                ? "To receive the prompt by email, use the generator first: enter your name and email, generate your prompt, then click Submit before paying. The prompt is saved when you click Submit and is sent after payment."
-                : emailSentReason === "email_send_failed"
-                  ? "Payment recorded, but we couldn't send the email. Please check your inbox or contact support with your payment ID."
-                  : "Your prompt could not be sent (it may have already been sent or expired). Check your inbox or generate again."
-              : "Check your inbox for the prompt and receipt."}
+          The prompt PDF has been sent to your email.
         </p>
 
         {/* Payment details: name, email, time, amount */}

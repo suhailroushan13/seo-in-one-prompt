@@ -223,18 +223,29 @@ export function StepWizard({ form, update, onGenerate }: StepWizardProps) {
               <label className={`${labelClass} ${domainInvalid ? requiredLabelClass : ""}`}>
                 Domain <span className="text-red-500 dark:text-red-400">*</span>
               </label>
-              <input
-                type="url"
-                className={`${inputClass} ${domainInvalid ? requiredInputClass : ""}`}
-                placeholder="https://www.zomato.com"
-                value={form.domainName}
-                onChange={(e) => update("domainName", e.target.value)}
-                aria-invalid={domainInvalid}
-                aria-describedby={domainInvalid ? "domain-error" : undefined}
-              />
+              <div className={`flex h-9 items-stretch overflow-hidden rounded-lg border transition-colors focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 ${domainInvalid ? "border-red-500 dark:border-red-400" : "border-input"}`}>
+                <span className="flex select-none items-center border-r border-input bg-muted/60 px-2.5 text-xs font-medium text-muted-foreground">
+                  https://
+                </span>
+                <input
+                  type="text"
+                  inputMode="url"
+                  autoComplete="url"
+                  className="h-full w-full bg-transparent px-2.5 text-sm outline-none placeholder:text-muted-foreground dark:bg-input/30"
+                  placeholder="zomato.com"
+                  value={form.domainName.replace(/^https?:\/\//i, "")}
+                  onChange={(e) => {
+                    const raw = e.target.value.trim();
+                    const domainPart = raw.replace(/^https?:\/\//i, "");
+                    update("domainName", domainPart ? `https://${domainPart}` : "");
+                  }}
+                  aria-invalid={domainInvalid}
+                  aria-describedby={domainInvalid ? "domain-error" : undefined}
+                />
+              </div>
               {domainInvalid && form.domainName.trim() !== "" && !isValidDomainOrUrl(form.domainName) && (
                 <p id="domain-error" className="mt-1.5 text-xs text-red-500 dark:text-red-400">
-                  Enter a valid URL or domain (e.g. https://example.com or example.com)
+                  Enter a valid domain (e.g. example.com)
                 </p>
               )}
             </div>
