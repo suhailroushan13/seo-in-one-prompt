@@ -1,4 +1,18 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+
+export const metadata: Metadata = {
+  title: "Example Prompts",
+  description:
+    "Curated SEO prompt examples for SaaS landing pages, blogs, e-commerce, and more. See what the generator produces.",
+  alternates: { canonical: "/examples" },
+  openGraph: {
+    title: "Example Prompts | SEO Prompt Generator",
+    description:
+      "Curated SEO prompt examples for different project types.",
+    url: "/examples",
+  },
+};
 
 export default function ExamplesPage() {
   return (

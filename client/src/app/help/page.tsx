@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft, HelpCircle } from "lucide-react";
 import { ScrollToHash } from "@/components/ScrollToHash";
+import { JsonLd } from "@/components/JsonLd";
 import {
   TECH_OPTIONS,
   PAGE_TYPE_OPTIONS,
@@ -20,14 +21,38 @@ import {
 } from "@/lib/types";
 
 export const metadata: Metadata = {
-  title: "Help — SEO Prompt Generator",
+  title: "Help",
   description:
     "Learn what each form field means: brand, domain, keywords, content strategy, and output options. Examples and defaults for the SEO prompt generator.",
+  alternates: { canonical: "/help" },
   openGraph: {
-    title: "Help — SEO Prompt Generator",
+    title: "Help | SEO Prompt Generator",
     description:
       "Learn what each form field means with examples and defaults for the SEO prompt generator.",
+    url: "/help",
   },
+};
+
+const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL || "https://seoprompt.ai";
+
+const breadcrumbJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  itemListElement: [
+    {
+      "@type": "ListItem",
+      position: 1,
+      name: "Home",
+      item: SITE_URL,
+    },
+    {
+      "@type": "ListItem",
+      position: 2,
+      name: "Help",
+      item: `${SITE_URL}/help`,
+    },
+  ],
 };
 
 function HelpSection({
@@ -89,6 +114,7 @@ function HelpItem({
 export default function HelpPage() {
   return (
     <div className="min-h-full">
+      <JsonLd data={breadcrumbJsonLd} />
       <header className="border-b border-border/50 px-4 py-3 sm:px-6">
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-4">
           <Link

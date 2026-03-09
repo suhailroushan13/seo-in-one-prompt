@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { Sun, Moon, HelpCircle } from "lucide-react";
@@ -34,9 +35,14 @@ export function Navbar() {
           className="flex min-w-0 shrink-0 items-center gap-2"
           aria-label="SEO Prompt Generator home"
         >
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-foreground">
-            <span className="text-xs font-bold text-background">S</span>
-          </div>
+          <Image
+            src="/favicon-32x32.png"
+            alt="SEO Prompt Generator logo"
+            width={28}
+            height={28}
+            className="shrink-0 rounded-lg"
+            priority
+          />
           <span className="truncate text-sm font-semibold tracking-tight sm:max-w-[200px]">
             SEO Prompt Generator
           </span>

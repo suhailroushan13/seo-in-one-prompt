@@ -1,4 +1,13 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+
+export const metadata: Metadata = {
+  title: "Log In",
+  description:
+    "Sign in to access your saved SEO prompts and unlimited generations.",
+  alternates: { canonical: "/login" },
+  robots: { index: false, follow: true },
+};
 
 export default function LoginPage() {
   return (

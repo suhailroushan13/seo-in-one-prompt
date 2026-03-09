@@ -1,4 +1,18 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+
+export const metadata: Metadata = {
+  title: "Pricing",
+  description:
+    "Free to start generating SEO prompts. Upgrade for unlimited prompts and advanced features.",
+  alternates: { canonical: "/pricing" },
+  openGraph: {
+    title: "Pricing | SEO Prompt Generator",
+    description:
+      "Free to start generating SEO prompts. Upgrade for unlimited prompts and advanced features.",
+    url: "/pricing",
+  },
+};
 
 export default function PricingPage() {
   return (

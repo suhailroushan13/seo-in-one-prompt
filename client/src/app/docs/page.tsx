@@ -1,4 +1,18 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+
+export const metadata: Metadata = {
+  title: "Documentation",
+  description:
+    "Learn how to get the most out of SEO Prompt Generator — guides, tips, and advanced usage.",
+  alternates: { canonical: "/docs" },
+  openGraph: {
+    title: "Documentation | SEO Prompt Generator",
+    description:
+      "Learn how to get the most out of SEO Prompt Generator — guides, tips, and advanced usage.",
+    url: "/docs",
+  },
+};
 
 export default function DocsPage() {
   return (

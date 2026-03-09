@@ -18,18 +18,21 @@ const features = [
 
 export function FeatureRow() {
   return (
-    <section className="border-y border-border/40 bg-muted/30">
-      <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-center gap-x-8 gap-y-4 px-4 py-5 sm:px-6">
+    <section
+      className="border-y border-border/40 bg-muted/30"
+      aria-label="Key features"
+    >
+      <ul className="mx-auto flex max-w-5xl flex-wrap items-center justify-center gap-x-8 gap-y-4 px-4 py-5 sm:px-6">
         {features.map((f) => (
-          <div
+          <li
             key={f.label}
             className="flex items-center gap-2 text-sm text-muted-foreground"
           >
-            <f.icon className="h-4 w-4" />
+            <f.icon className="h-4 w-4" aria-hidden />
             <span>{f.label}</span>
-          </div>
+          </li>
         ))}
-      </div>
+      </ul>
     </section>
   );
 }
