@@ -67,6 +67,12 @@ export async function POST(request: NextRequest) {
 
     const promptInBody = typeof promptFromBody === "string" && promptFromBody.trim().length > 0;
 
+    console.log("[payment/complete] Debug info:", {
+      email: key,
+      hasPromptInBody: promptInBody,
+      promptBodyLength: promptFromBody ? promptFromBody.length : 0,
+    });
+
     // 1) Get prompt + name + brandName: from request body (localStorage) or from server pending store
     let promptToSend: string | null = null;
     let nameToUse: string | undefined;
@@ -77,6 +83,11 @@ export async function POST(request: NextRequest) {
       brandToUse = brandNameFromBody && String(brandNameFromBody).trim() || undefined;
     } else {
       const pending = await getAndDeletePendingPrompt(key);
+      console.log("[payment/complete] Pending from MongoDB:", {
+        found: !!pending,
+        hasPrompt: pending?.prompt ? true : false,
+        promptLength: pending?.prompt?.length ?? 0,
+      });
       if (pending) {
         promptToSend = pending.prompt;
         nameToUse = pending.name || nameFromBody?.trim() || undefined;
@@ -126,14 +137,24 @@ export async function POST(request: NextRequest) {
     // 3) Send HTML email with PDF attachment (if we have a prompt) — only once per payment_id (checked above)
     let sent = false;
     let sendError: string | undefined;
+    console.log("[payment/complete] About to send email:", {
+      hasPrompt: !!promptToSend,
+      promptLength: promptToSend?.length ?? 0,
+      email: key,
+      name: nameToUse,
+      brand: brandToUse,
+    });
     if (promptToSend) {
       try {
         await sendPromptEmail(key, promptToSend, nameToUse, brandToUse);
         sent = true;
+        console.log("[payment/complete] Email sent successfully to:", key);
       } catch (err) {
         sendError = err instanceof Error ? err.message : "Send failed";
         console.error("[payment/complete] Email send failed:", err);
       }
+    } else {
+      console.warn("[payment/complete] No prompt to send for email:", key);
     }
 
     return NextResponse.json({

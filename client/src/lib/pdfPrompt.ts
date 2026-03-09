@@ -12,6 +12,12 @@ export async function buildPromptPdf(
   _userName: string,
   _brandName: string
 ): Promise<{ buffer: Buffer; filename: string }> {
+  console.log("[buildPromptPdf] Starting PDF generation:", {
+    promptLength: prompt.length,
+    userName: _userName,
+    brandName: _brandName,
+  });
+
   const doc = await PDFDocument.create();
   const font = await doc.embedFont(StandardFonts.Courier);
   const pages = doc.getPages();
@@ -21,6 +27,7 @@ export async function buildPromptPdf(
   let y = height - MARGIN;
 
   const lines = prompt.split(/\r?\n/);
+  console.log("[buildPromptPdf] Processing lines:", lines.length);
 
   for (const line of lines) {
     const wrapped = wrapLine(line, font, FONT_SIZE, maxWidth);
@@ -41,9 +48,16 @@ export async function buildPromptPdf(
     }
   }
 
+  console.log("[buildPromptPdf] Saving PDF...");
   const bytes = await doc.save();
   const buffer = Buffer.from(bytes);
   const filename = `seo-prompt-${Date.now()}.pdf`;
+
+  console.log("[buildPromptPdf] PDF created:", {
+    filename,
+    bufferSize: buffer.length,
+    pageCount: doc.getPageCount(),
+  });
 
   return { buffer, filename };
 }

@@ -64,12 +64,27 @@ export async function sendPromptEmail(
   name?: string,
   brandName?: string
 ): Promise<void> {
+  console.log("[sendPromptEmail] Starting email send:", {
+    to,
+    promptLength: prompt.length,
+    name,
+    brandName,
+  });
+
   const transporter = getTransporter();
   const userName = (name ?? "").trim() || "User";
   const brand = (brandName ?? "").trim() || "Project";
+  
+  console.log("[sendPromptEmail] Building PDF...");
   const { buffer, filename } = await buildPromptPdf(prompt, userName, brand);
+  console.log("[sendPromptEmail] PDF built:", {
+    filename,
+    bufferSize: buffer.length,
+  });
+
   const html = getHtmlTemplate(name, filename);
 
+  console.log("[sendPromptEmail] Sending email via Gmail...");
   await transporter.sendMail({
     from: FROM,
     to,
@@ -84,4 +99,5 @@ export async function sendPromptEmail(
       },
     ],
   });
+  console.log("[sendPromptEmail] Email sent successfully to:", to);
 }

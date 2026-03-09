@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { AlertCircle, ArrowRight, Inbox, Check } from "lucide-react";
+import { AlertCircle, ArrowRight, Check } from "lucide-react";
 import { loadPendingPrompt, clearFormAndUserStorage } from "@/lib/formStorage";
 
 const FAILURE_MESSAGES: Record<string, string> = {
@@ -25,20 +25,6 @@ function formatAmount(amount: number, currency = "USD") {
     style: "currency",
     currency,
   }).format(amount);
-}
-
-/** Returns the webmail inbox URL for the given email, or Gmail as default. */
-function getInboxUrl(email: string): string {
-  const domain = email.split("@")[1]?.toLowerCase() ?? "";
-  if (domain === "gmail.com" || domain === "googlemail.com")
-    return "https://mail.google.com/mail/u/0/#inbox";
-  if (["outlook.com", "hotmail.com", "live.com", "msn.com", "hotmail.co.uk", "live.co.uk"].includes(domain))
-    return "https://outlook.live.com/mail/0/inbox";
-  if (domain.startsWith("yahoo."))
-    return "https://mail.yahoo.com/";
-  if (["icloud.com", "me.com", "mac.com"].includes(domain))
-    return "https://www.icloud.com/mail";
-  return "https://mail.google.com/mail/u/0/#inbox";
 }
 
 function PaymentResultContent() {
@@ -79,6 +65,12 @@ function PaymentResultContent() {
           }
         : {}),
     };
+    console.log("[payment/result] Calling complete API with:", {
+      email: key,
+      hasPrompt: useStorage && !!pendingFromStorage?.prompt,
+      promptLength: useStorage && pendingFromStorage?.prompt ? pendingFromStorage.prompt.length : 0,
+      useStorage,
+    });
     fetch("/api/payment/complete", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -86,12 +78,16 @@ function PaymentResultContent() {
     })
       .then((res) => res.json())
       .then((data) => {
+        console.log("[payment/result] Complete API response:", data);
         if (data?.name) setStoredName(data.name);
         if (typeof data?.sent === "boolean") setEmailSent(data.sent);
         if (data?.reason) setEmailSentReason(data.reason);
         if (data?.sent === true) clearFormAndUserStorage();
       })
-      .catch(() => setEmailSent(false));
+      .catch((err) => {
+        console.error("[payment/result] Complete API error:", err);
+        setEmailSent(false);
+      });
   }, [isSuccess, searchParams, status]);
 
   if (isSuccess) {
@@ -102,7 +98,6 @@ function PaymentResultContent() {
     const amount = amountParam ? Number(amountParam) : undefined;
     const currency = searchParams.get("currency")?.trim() || "USD";
     const displayTime = paymentTime ?? new Date();
-    const inboxUrl = getInboxUrl(email);
 
     return (
       <div className="mx-auto max-w-md px-4 py-24 text-center">
@@ -164,15 +159,6 @@ function PaymentResultContent() {
         </div>
 
         <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-          <a
-            href={inboxUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex h-11 min-w-[44px] items-center justify-center gap-2 rounded-xl bg-foreground px-5 py-3 text-sm font-medium text-background shadow-md transition-opacity hover:opacity-90"
-          >
-            <Inbox className="h-4 w-4 shrink-0" aria-hidden />
-            Open inbox
-          </a>
           <Link
             href="/"
             className="inline-flex h-11 min-w-[44px] items-center justify-center gap-2 rounded-xl border border-border bg-transparent px-5 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted"
