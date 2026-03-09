@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 
 export function Footer() {
-  const [views, setViews] = useState<number | null>(null);
+  const [, setViews] = useState<number | null>(null);
 
   useEffect(() => {
     fetch("/api/views", { method: "POST" })

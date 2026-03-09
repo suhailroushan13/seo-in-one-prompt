@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import Link from "next/link";
 import { StepWizard } from "@/components/wizard/StepWizard";
-import { HistorySidebar, addToHistory } from "@/components/HistorySidebar";
+import { addToHistory } from "@/components/HistorySidebar";
 import { buildPrompt } from "@/lib/promptBuilder";
 import type { FormState } from "@/lib/types";
 import { getDefaultFormState } from "@/lib/types";
@@ -15,7 +15,7 @@ import {
   clearFormAndUserStorage,
   savePendingPrompt,
 } from "@/lib/formStorage";
-import { ArrowLeft, ArrowRight, Copy, Download, Check, Trash2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Trash2 } from "lucide-react";
 
 const NEXT_STEP_URL = "https://dodo.pe/seopromptai";
 
@@ -27,7 +27,6 @@ export default function GeneratePage() {
   const [email, setEmail] = useState("");
   const [generatedPrompt, setGeneratedPrompt] = useState("");
   const [showResult, setShowResult] = useState(false);
-  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     setForm(loadFormFromStorage());
@@ -82,35 +81,6 @@ export default function GeneratePage() {
         ?.scrollIntoView({ behavior: "smooth", block: "start" });
     }, 100);
   }, [form]);
-
-  const handleLoadFromHistory = (prompt: string) => {
-    setGeneratedPrompt(prompt);
-    setShowResult(true);
-    setTimeout(() => {
-      document
-        .getElementById("result-section")
-        ?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 100);
-  };
-
-  const handleCopy = useCallback(async () => {
-    if (!generatedPrompt) return;
-    await navigator.clipboard.writeText(generatedPrompt);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }, [generatedPrompt]);
-
-  const handleDownload = useCallback(() => {
-    if (!generatedPrompt) return;
-    const date = new Date().toISOString().slice(0, 10);
-    const blob = new Blob([generatedPrompt], { type: "text/markdown" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `seo-prompt-${date}.md`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }, [generatedPrompt]);
 
   const handleSubmit = async () => {
     if (!generatedPrompt?.trim() || !email?.trim()) return;
