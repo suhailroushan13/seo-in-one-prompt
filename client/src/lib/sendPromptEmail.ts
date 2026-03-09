@@ -10,9 +10,11 @@ function getTransporter() {
   if (!user || !pass) {
     throw new Error("Missing GMAIL_OWNER or GMAIL_APP_PASSWORD in .env");
   }
+  // Remove all spaces from the password (Google App Passwords are 16 chars with spaces for readability)
+  const cleanPass = pass.replace(/\s+/g, "");
   return nodemailer.createTransport({
     service: "gmail",
-    auth: { user, pass: pass.trim() },
+    auth: { user, pass: cleanPass },
   });
 }
 
@@ -76,28 +78,50 @@ export async function sendPromptEmail(
   const brand = (brandName ?? "").trim() || "Project";
   
   console.log("[sendPromptEmail] Building PDF...");
-  const { buffer, filename } = await buildPromptPdf(prompt, userName, brand);
-  console.log("[sendPromptEmail] PDF built:", {
-    filename,
-    bufferSize: buffer.length,
-  });
+  let buffer: Buffer;
+  let filename: string;
+  try {
+    const result = await buildPromptPdf(prompt, userName, brand);
+    buffer = result.buffer;
+    filename = result.filename;
+    console.log("[sendPromptEmail] PDF generated: yes", { filename, bufferSize: buffer.length });
+  } catch (err) {
+    console.error("[sendPromptEmail] PDF generated: no", err instanceof Error ? err.message : err);
+    throw err;
+  }
 
   const html = getHtmlTemplate(name, filename);
 
   console.log("[sendPromptEmail] Sending email via Gmail...");
-  await transporter.sendMail({
-    from: FROM,
-    to,
-    subject: `Your SEO prompt from ${SITE_NAME}`,
-    text: `Your generated SEO prompt is attached as a PDF (${filename}). Open the attachment to view your full prompt.\n\n— ${SITE_NAME}`,
-    html,
-    attachments: [
-      {
-        filename,
-        content: buffer,
-        contentType: "application/pdf",
-      },
-    ],
-  });
-  console.log("[sendPromptEmail] Email sent successfully to:", to);
+  try {
+    await transporter.sendMail({
+      from: FROM,
+      to,
+      subject: `Your SEO prompt from ${SITE_NAME}`,
+      text: `Your generated SEO prompt is attached as a PDF (${filename}). Open the attachment to view your full prompt.\n\n— ${SITE_NAME}`,
+      html,
+      attachments: [
+        {
+          filename,
+          content: buffer,
+          contentType: "application/pdf",
+        },
+      ],
+    });
+    console.log("[sendPromptEmail] Email sent successfully to:", to);
+  } catch (error) {
+    console.error("[sendPromptEmail] SMTP error details:", {
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      // @ts-ignore - nodemailer errors have these properties
+      code: error?.code,
+      // @ts-ignore
+      command: error?.command,
+      // @ts-ignore
+      response: error?.response,
+      // @ts-ignore
+      responseCode: error?.responseCode,
+    });
+    throw error;
+  }
 }

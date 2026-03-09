@@ -58,6 +58,7 @@ export async function buildPromptPdf(
     bufferSize: buffer.length,
     pageCount: doc.getPageCount(),
   });
+  console.log("[buildPromptPdf] PDF generated: yes");
 
   return { buffer, filename };
 }
