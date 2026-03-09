@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ChevronDown, ArrowRight, ArrowLeft, Sparkles, HelpCircle } from "lucide-react";
-import { StepProgress } from "./StepProgress";
 import { PageTypeCards } from "@/components/inputs/PageTypeCards";
 import { TagInput } from "@/components/inputs/TagInput";
 import { SegmentControl } from "@/components/inputs/SegmentControl";
@@ -31,13 +30,6 @@ interface StepWizardProps {
   update: <K extends keyof FormState>(key: K, value: FormState[K]) => void;
   onGenerate: () => void;
 }
-
-const STEP_LABELS = [
-  "Project Identity",
-  "SEO Keywords",
-  "Content Strategy",
-  "Output Options",
-];
 
 const inputClass =
   "h-9 w-full rounded-lg border border-input bg-transparent px-2.5 py-1 text-sm transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30";
@@ -178,13 +170,6 @@ export function StepWizard({ form, update, onGenerate }: StepWizardProps) {
 
   return (
     <div className="space-y-6" id="wizard">
-      <StepProgress
-        currentStep={currentStep}
-        totalSteps={4}
-        stepLabels={STEP_LABELS}
-        onStepClick={goTo}
-      />
-
       {/* Step 1: Project Identity */}
       <StepPanel
         id="wizard-step-1"
