@@ -17,6 +17,24 @@ export function Hero() {
         <div className="absolute left-1/2 top-0 h-[500px] w-[800px] -translate-x-1/2 rounded-full bg-linear-to-b from-primary/5 to-transparent blur-3xl" />
       </div>
 
+      <div className="mx-auto flex max-w-7xl justify-center mb-6">
+            <a
+              href="https://www.producthunt.com/products/seo-prompt-generator?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-seo-prompt-generator"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block transition-opacity hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded-lg"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                alt="SEO Prompt Generator - SEO in One Prompt — Full SEO strategy generated instantly | Product Hunt"
+                width={250}
+                height={54}
+                className="h-10 w-[200px] object-contain sm:h-[54px] sm:w-[250px]"
+                src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1093872&theme=light&t=1773092815363"
+              />
+            </a>
+          </div>
+
       <div className="mx-auto max-w-3xl px-6 text-center sm:px-8">
         <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-border/60 bg-muted/50 px-4 py-1.5 text-sm text-muted-foreground">
           <Sparkles className="h-3.5 w-3.5 text-green-500" />
