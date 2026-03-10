@@ -29,5 +29,13 @@ export async function generateSeoPromptReport(
 
   const buffer = await renderToBuffer(doc as React.JSX.Element);
 
-  return { buffer: Buffer.from(buffer), filename: "seo-prompt-report.pdf" };
+  const safeBrand = (input.brandName || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9-_]/g, "");
+  const filename =
+    safeBrand.length > 0 ? `${safeBrand}-seo-prompt.pdf` : "seo-prompt.pdf";
+
+  return { buffer: Buffer.from(buffer), filename };
 }

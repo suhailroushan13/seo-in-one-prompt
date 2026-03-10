@@ -98,5 +98,5 @@ The page will treat a missing `status` as failure and show “Payment unsuccessf
 
 ## What the user sees
 
-- **Success** (`status=success`): “Payment received” and “Check your inbox” — the SEO prompt is sent to the customer’s email as a **PDF** attachment. The attachment filename is `{UserName}-{BrandName}-seo-prompt.pdf` (e.g. `John-Doe-Zomato-seo-prompt.pdf`).
+- **Success** (`status=success`): “Payment received” and “Check your inbox” — the SEO prompt is sent to the customer’s email as a **PDF** attachment. The attachment filename is `{brandname}-seo-prompt.pdf` (e.g. `zomato-seo-prompt.pdf`).
 - **Failure** (`status=failure` or no `status`): “Payment unsuccessful” plus a reason (cancelled, failed, declined, expired).

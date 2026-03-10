@@ -38,14 +38,12 @@ function getHtmlTemplate(name: string | undefined, filename: string): string {
               <img src="${SITE_URL}/favicon-32x32.png?v=3" alt="${SITE_NAME}" width="48" height="48" style="display: block; width: 48px; height: 48px; border-radius: 12px; margin-bottom: 24px;" />
               <h1 style="margin: 0 0 8px; font-size: 24px; font-weight: 700; color: #0f172a; letter-spacing: -0.02em;">Your SEO prompt is ready</h1>
               <p style="margin: 0; font-size: 16px; color: #475569; line-height: 1.6;">${greeting}</p>
-              <p style="margin: 20px 0 0; font-size: 15px; color: #475569; line-height: 1.65;">Below is attached your <strong>PDF</strong> of the given prompt (<strong>${filename}</strong>). Open the attachment to view your full prompt and use it with your AI or dev team to implement the SEO setup.</p>
-              <table role="presentation" cellspacing="0" cellpadding="0" style="margin-top: 28px;">
-                <tr>
-                  <td style="padding: 14px 20px; background: #f1f5f9; border-radius: 10px;">
-                    <p style="margin: 0; font-size: 13px; color: #64748b;">📎 Attachment: <strong style="color: #334155;">${filename}</strong></p>
-                  </td>
-                </tr>
-              </table>
+              <p style="margin: 20px 0 0; font-size: 15px; color: #475569; line-height: 1.65;">Below is attached your <strong>PDF</strong> of the given prompt (<strong>${filename}</strong>).
+              
+              <br>
+              <br>
+              Open the attachment to view your full prompt and use it with your AI or dev team to implement the SEO setup.</p>
+              <p style="margin: 28px 0 0; font-size: 13px; color: #64748b;">📎 Attachment Below: <strong style="color: #334155;">${filename}</strong></p>
             </td>
           </tr>
           <tr>
