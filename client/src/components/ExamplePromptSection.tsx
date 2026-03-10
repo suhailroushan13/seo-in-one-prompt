@@ -5,9 +5,9 @@ import { ChevronDown, ChevronUp } from "lucide-react";
 
 const EXAMPLE_PROMPT = `You are a world-class full-stack SEO engineer and Next.js expert. Implement a COMPLETE, production-ready SEO setup for the following project.
 
-══════════════════════════════════════════
+==========================================
 PROJECT OVERVIEW
-══════════════════════════════════════════
+==========================================
 Brand Name     : DevHire
 Domain         : https://devhire.io
 Project Type   : SaaS Landing Page
@@ -15,9 +15,9 @@ Tech Stack     : Next.js (App Router) + TypeScript + Tailwind
 Description    : Platform to hire developers directly from GitHub
 Target Audience: CTOs, HR Leaders, Engineering Managers
 
-══════════════════════════════════════════
+==========================================
 1. SEO STRATEGY & KEYWORD MAPPING
-══════════════════════════════════════════
+==========================================
 Primary Keyword  : best project management tool for startups
 Secondary Keywords: project management tool for startups, project management software for startups, project management tool for small businesses
 Search Intent    : Commercial (user wants to evaluate / buy)
