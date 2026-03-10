@@ -47,11 +47,11 @@ export function Hero() {
         </h1>
 
         <p className="mx-auto mt-6 max-w-xl text-sm text-muted-foreground sm:text-base">
-          Describe your project &rarr; get a complete SEO plan including
+          Get a complete SEO plan including
           keywords, content structure, metadata, and optimization instructions.
         </p>
 
-        <div className="mt-10 flex flex-nowrap items-center justify-center gap-3 sm:gap-6">
+        <div className="mt-10 flex flex-nowrap items-center justify-center gap-3 sm:gap-6 md:hidden">
           {steps.map((step) => {
             const Icon = step.icon;
             return (
@@ -67,14 +67,14 @@ export function Hero() {
           })}
         </div>
 
-        <div className="mt-10 flex justify-center">
+        <div className="mt-10 flex w-full justify-center">
           <Link
             href="/generate"
-            className="inline-flex min-h-11 min-w-[44px] cursor-pointer items-center justify-center gap-2 rounded-xl bg-foreground px-6 py-3 text-sm font-medium text-background shadow-lg shadow-foreground/10 transition-all hover:opacity-90 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="inline-flex min-h-14 min-w-[280px] cursor-pointer items-center justify-center gap-3 rounded-2xl bg-foreground px-8 py-4 text-base font-semibold text-background shadow-lg shadow-foreground/10 transition-all hover:opacity-90 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:min-h-16 sm:min-w-[320px] sm:px-10 sm:py-5 sm:text-lg md:min-h-[72px] md:min-w-[360px] md:px-12 md:py-6 md:text-xl"
             aria-label="Generate your free SEO prompt"
           >
             Generate SEO Prompt
-            <ArrowRight className="h-4 w-4" aria-hidden />
+            <ArrowRight className="h-5 w-5 shrink-0 sm:h-6 sm:w-6" aria-hidden />
           </Link>
         </div>
 
