@@ -14,6 +14,8 @@ import {
   saveUserToStorage,
   clearFormAndUserStorage,
   savePendingPrompt,
+  loadGeneratedPrompt,
+  saveGeneratedPrompt,
 } from "@/lib/formStorage";
 import { ArrowLeft, ArrowRight, Trash2, Loader2 } from "lucide-react";
 
@@ -34,6 +36,11 @@ export default function GeneratePage() {
     const user = loadUserFromStorage();
     setFullName(user.fullName);
     setEmail(user.email);
+    const savedPrompt = loadGeneratedPrompt();
+    if (savedPrompt?.trim()) {
+      setGeneratedPrompt(savedPrompt.trim());
+      setShowResult(true);
+    }
     setHasHydrated(true);
   }, []);
 
@@ -65,6 +72,7 @@ export default function GeneratePage() {
     const prompt = buildPrompt(form);
     setGeneratedPrompt(prompt);
     setShowResult(true);
+    saveGeneratedPrompt(prompt);
 
     const title =
       [form.primaryKw, form.pageType].filter(Boolean).join(" — ") ||

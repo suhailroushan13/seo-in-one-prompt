@@ -3,8 +3,8 @@
 import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { AlertCircle, ArrowRight, Check } from "lucide-react";
-import { loadPendingPrompt, clearFormAndUserStorage } from "@/lib/formStorage";
+import { AlertCircle, ArrowRight, Check, Download } from "lucide-react";
+import { loadPendingPrompt, clearFormAndUserStorage, saveViewPrompt, loadViewPrompt } from "@/lib/formStorage";
 
 const FAILURE_MESSAGES: Record<string, string> = {
   cancelled: "You cancelled the payment.",
@@ -34,8 +34,15 @@ function PaymentResultContent() {
   const completeCalledRef = useRef(false);
   const [paymentTime, setPaymentTime] = useState<Date | null>(null);
   const [storedName, setStoredName] = useState<string | null>(null);
+  const [viewPromptAvailable, setViewPromptAvailable] = useState(false);
   const [, setEmailSent] = useState<boolean | null>(null);
   const [, setEmailSentReason] = useState<string | null>(null);
+
+  // If we already have prompt in sessionStorage (e.g. after refresh), show Download Prompt button
+  useEffect(() => {
+    if (!isSuccess) return;
+    if (loadViewPrompt()?.trim()) setViewPromptAvailable(true);
+  }, [isSuccess]);
 
   // Record payment + send email: use prompt/name from localStorage (saved when user clicked Submit), or fallback to server pending
   useEffect(() => {
@@ -50,6 +57,10 @@ function PaymentResultContent() {
       pendingFromStorage &&
       pendingFromStorage.email === key &&
       pendingFromStorage.prompt?.trim();
+    if (useStorage && pendingFromStorage?.prompt?.trim()) {
+      saveViewPrompt(pendingFromStorage.prompt.trim());
+      setViewPromptAvailable(true);
+    }
     const body = {
       email: key,
       status,
@@ -159,6 +170,17 @@ function PaymentResultContent() {
         </div>
 
         <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+          {viewPromptAvailable && (
+            <a
+              href="/view"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex h-11 min-w-[44px] items-center justify-center gap-2 rounded-xl bg-foreground px-5 py-3 text-sm font-medium text-background transition-opacity hover:opacity-90"
+            >
+              Download Prompt
+              <Download className="h-4 w-4 shrink-0" aria-hidden />
+            </a>
+          )}
           <Link
             href="/"
             className="inline-flex h-11 min-w-[44px] items-center justify-center gap-2 rounded-xl border border-border bg-transparent px-5 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted"

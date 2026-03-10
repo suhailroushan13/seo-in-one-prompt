@@ -11,10 +11,12 @@ interface ReportInput {
 export async function generateSeoPromptReport(
   input: ReportInput
 ): Promise<{ buffer: Buffer; filename: string }> {
-  const generatedDate = new Date().toLocaleDateString("en-US", {
+  const generatedDate = new Date().toLocaleString("en-US", {
     year: "numeric",
-    month: "long",
+    month: "short",
     day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
   });
 
   const doc = createSeoPromptDocument({

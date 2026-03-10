@@ -4,6 +4,8 @@ import { getDefaultFormState } from "./types";
 const FORM_DRAFT_KEY = "seo-prompt-form-draft";
 const USER_STORAGE_KEY = "seo-prompt-user";
 const PENDING_PROMPT_KEY = "seo-prompt-pending";
+const VIEW_PROMPT_KEY = "seo-prompt-view";
+const GENERATED_PROMPT_KEY = "seo-prompt-generated";
 
 export interface StoredUser {
   fullName: string;
@@ -98,13 +100,61 @@ export function clearPendingPrompt(): void {
   }
 }
 
-/** Clears form draft and user (name/email) from localStorage. */
+/** Clears form draft, user, pending prompt, and generated prompt from localStorage. */
 export function clearFormAndUserStorage(): void {
   if (typeof window === "undefined") return;
   try {
     localStorage.removeItem(FORM_DRAFT_KEY);
     localStorage.removeItem(USER_STORAGE_KEY);
     localStorage.removeItem(PENDING_PROMPT_KEY);
+    localStorage.removeItem(GENERATED_PROMPT_KEY);
+  } catch {
+    // ignore
+  }
+}
+
+/** Last generated prompt on /generate — persisted so it survives refresh and is available for /view. */
+export function saveGeneratedPrompt(prompt: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(GENERATED_PROMPT_KEY, prompt);
+  } catch {
+    // ignore
+  }
+}
+
+export function loadGeneratedPrompt(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return localStorage.getItem(GENERATED_PROMPT_KEY);
+  } catch {
+    return null;
+  }
+}
+
+/** SessionStorage: prompt saved for the /view page (e.g. after payment success). */
+export function saveViewPrompt(prompt: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.setItem(VIEW_PROMPT_KEY, prompt);
+  } catch {
+    // ignore
+  }
+}
+
+export function loadViewPrompt(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return sessionStorage.getItem(VIEW_PROMPT_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function clearViewPrompt(): void {
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.removeItem(VIEW_PROMPT_KEY);
   } catch {
     // ignore
   }
