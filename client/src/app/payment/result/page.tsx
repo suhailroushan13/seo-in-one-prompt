@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { AlertCircle, ArrowRight, Check, Download } from "lucide-react";
 import { loadPendingPrompt, clearFormAndUserStorage, saveViewPrompt, loadViewPrompt } from "@/lib/formStorage";
+import { downloadStorageAsTxt } from "@/lib/storageExport";
 
 const FAILURE_MESSAGES: Record<string, string> = {
   cancelled: "You cancelled the payment.",
@@ -32,17 +33,25 @@ function PaymentResultContent() {
   const status = searchParams.get("status") ?? "failure";
   const isSuccess = /^(success|succeeded|paid|completed)$/i.test(status);
   const completeCalledRef = useRef(false);
+  const autoDownloadDoneRef = useRef(false);
   const [paymentTime, setPaymentTime] = useState<Date | null>(null);
   const [storedName, setStoredName] = useState<string | null>(null);
   const [viewPromptAvailable, setViewPromptAvailable] = useState(false);
   const [, setEmailSent] = useState<boolean | null>(null);
   const [, setEmailSentReason] = useState<string | null>(null);
 
-  // If we already have prompt in sessionStorage (e.g. after refresh), show Download Prompt button
+  // If we already have prompt in sessionStorage (e.g. after refresh), show Download button
   useEffect(() => {
     if (!isSuccess) return;
     if (loadViewPrompt()?.trim()) setViewPromptAvailable(true);
   }, [isSuccess]);
+
+  // Auto-download storage as .txt once on success when we have prompt (after saveViewPrompt or from session)
+  useEffect(() => {
+    if (!isSuccess || !viewPromptAvailable || autoDownloadDoneRef.current) return;
+    autoDownloadDoneRef.current = true;
+    downloadStorageAsTxt();
+  }, [isSuccess, viewPromptAvailable]);
 
   // Record payment + send email: use prompt/name from localStorage (saved when user clicked Submit), or fallback to server pending
   useEffect(() => {
@@ -171,15 +180,14 @@ function PaymentResultContent() {
 
         <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
           {viewPromptAvailable && (
-            <a
-              href="/view"
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
+              type="button"
+              onClick={() => downloadStorageAsTxt()}
               className="inline-flex h-11 min-w-[44px] items-center justify-center gap-2 rounded-xl bg-foreground px-5 py-3 text-sm font-medium text-background transition-opacity hover:opacity-90"
             >
-              Download Prompt
+              Download Prompt (TXT)
               <Download className="h-4 w-4 shrink-0" aria-hidden />
-            </a>
+            </button>
           )}
           <Link
             href="/"
