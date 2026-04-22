@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Copy, Check } from "lucide-react";
-import { loadPendingPrompt } from "@/lib/formStorage";
+import { loadViewPrompt, loadPendingPrompt } from "@/lib/formStorage";
 
 export default function ViewPromptPage() {
   const router = useRouter();
@@ -12,9 +12,12 @@ export default function ViewPromptPage() {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    const pending = loadPendingPrompt();
-    if (pending?.prompt?.trim()) {
-      setPrompt(pending.prompt.trim());
+    // sessionStorage is set by the payment result page; localStorage may still exist if not yet cleared
+    const fromSession = loadViewPrompt()?.trim();
+    const fromLocal = loadPendingPrompt()?.prompt?.trim();
+    const resolved = fromSession || fromLocal;
+    if (resolved) {
+      setPrompt(resolved);
     } else {
       router.replace("/");
     }

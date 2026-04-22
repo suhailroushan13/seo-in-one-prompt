@@ -56,28 +56,28 @@ function PaymentResultContent() {
   // Record payment + send email: use prompt/name from localStorage (saved when user clicked Submit), or fallback to server pending
   useEffect(() => {
     if (!isSuccess || completeCalledRef.current) return;
+    const pendingFromStorage = loadPendingPrompt();
     const emailFromUrl = searchParams.get("email")?.trim();
-    if (!emailFromUrl) return;
+    // Fall back to localStorage email if the payment provider didn't echo it back in the URL
+    const emailToUse = emailFromUrl || pendingFromStorage?.email;
+    if (!emailToUse) return;
     completeCalledRef.current = true;
     setPaymentTime(new Date());
-    const key = emailFromUrl.toLowerCase();
-    const pendingFromStorage = loadPendingPrompt();
-    const useStorage =
-      pendingFromStorage &&
-      pendingFromStorage.email === key &&
-      pendingFromStorage.prompt?.trim();
-    if (useStorage && pendingFromStorage?.prompt?.trim()) {
-      saveViewPrompt(pendingFromStorage.prompt.trim());
+    const key = emailToUse.toLowerCase();
+    // Use the localStorage prompt whenever it exists — it's always from the same browser session
+    const hasStoragePrompt = !!(pendingFromStorage?.prompt?.trim());
+    if (hasStoragePrompt) {
+      saveViewPrompt(pendingFromStorage!.prompt.trim());
       setViewPromptAvailable(true);
     }
     const body = {
       email: key,
       status,
-      name: searchParams.get("name")?.trim() || (useStorage ? pendingFromStorage!.fullName : undefined) || undefined,
+      name: searchParams.get("name")?.trim() || pendingFromStorage?.fullName || undefined,
       payment_id: searchParams.get("payment_id")?.trim() || undefined,
       amount: searchParams.get("amount") ? Number(searchParams.get("amount")) : undefined,
       currency: searchParams.get("currency")?.trim() || "USD",
-      ...(useStorage
+      ...(hasStoragePrompt
         ? {
             prompt: pendingFromStorage!.prompt.trim(),
             fullName: pendingFromStorage!.fullName,
@@ -87,9 +87,8 @@ function PaymentResultContent() {
     };
     console.log("[payment/result] Calling complete API with:", {
       email: key,
-      hasPrompt: useStorage && !!pendingFromStorage?.prompt,
-      promptLength: useStorage && pendingFromStorage?.prompt ? pendingFromStorage.prompt.length : 0,
-      useStorage,
+      hasPrompt: hasStoragePrompt,
+      promptLength: hasStoragePrompt ? pendingFromStorage!.prompt.length : 0,
     });
     fetch("/api/payment/complete", {
       method: "POST",
@@ -180,10 +179,19 @@ function PaymentResultContent() {
 
         <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
           {viewPromptAvailable && (
+            <Link
+              href="/prompt/view"
+              className="inline-flex h-11 min-w-[44px] items-center justify-center gap-2 rounded-xl bg-foreground px-5 py-3 text-sm font-medium text-background transition-opacity hover:opacity-90"
+            >
+              View Prompt
+              <ArrowRight className="h-4 w-4 shrink-0" aria-hidden />
+            </Link>
+          )}
+          {viewPromptAvailable && (
             <button
               type="button"
               onClick={() => downloadStorageAsTxt()}
-              className="inline-flex h-11 min-w-[44px] items-center justify-center gap-2 rounded-xl bg-foreground px-5 py-3 text-sm font-medium text-background transition-opacity hover:opacity-90"
+              className="inline-flex h-11 min-w-[44px] items-center justify-center gap-2 rounded-xl border border-border bg-transparent px-5 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted"
             >
               Download Prompt (TXT)
               <Download className="h-4 w-4 shrink-0" aria-hidden />
