@@ -51,7 +51,7 @@ export function Footer() {
               <Link
                 href="https://suhailroushan.com"
                 target="_blank"
-                rel="noopener noreferrer"
+                rel="noopener"
                 className="font-medium text-foreground underline-offset-4 hover:underline"
               >
                 Suhail Roushan
