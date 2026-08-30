@@ -187,20 +187,17 @@ interface KeywordSuggestionsProps {
   onChange: (value: string) => void;
   placeholder?: string;
   invalid?: boolean;
+  id?: string;
+  describedBy?: string;
 }
-
-const inputBaseClass =
-  "h-9 w-full rounded-lg border bg-transparent px-2.5 py-1 text-sm transition-colors outline-none placeholder:text-muted-foreground dark:bg-input/30";
-const inputInvalidClass =
-  "border-red-500 dark:border-red-400 focus-visible:border-red-500 focus-visible:ring-red-500/30 dark:focus-visible:border-red-400 dark:focus-visible:ring-red-400/30";
-const inputNormalClass =
-  "border-input focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
 
 export function KeywordSuggestions({
   value,
   onChange,
   placeholder,
   invalid,
+  id,
+  describedBy,
 }: KeywordSuggestionsProps) {
   const [focused, setFocused] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
@@ -231,18 +228,22 @@ export function KeywordSuggestions({
   return (
     <div ref={containerRef} className="relative">
       <input
+        id={id}
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onFocus={() => setFocused(true)}
         placeholder={placeholder}
-        className={`${inputBaseClass} ${invalid ? inputInvalidClass : inputNormalClass}`}
+        aria-invalid={invalid || undefined}
+        aria-describedby={describedBy}
+        autoComplete="off"
+        className="field-control"
       />
       {showSuggestions && (
-        <div className="absolute left-0 right-0 top-full z-30 mt-1.5 overflow-hidden rounded-lg border border-border bg-popover shadow-lg">
-          <div className="flex items-center gap-1.5 border-b border-border/50 px-3 py-2">
-            <Sparkles className="h-3 w-3 text-muted-foreground" />
-            <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+        <div className="absolute inset-x-0 top-full z-30 mt-1.5 overflow-hidden rounded-xl border border-border bg-popover shadow-lg">
+          <div className="flex items-center gap-1.5 border-b border-border px-3 py-2">
+            <Sparkles className="h-3 w-3 text-brand" aria-hidden />
+            <span className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
               Suggestions
             </span>
           </div>
@@ -254,7 +255,7 @@ export function KeywordSuggestions({
                 onChange(s);
                 setFocused(false);
               }}
-              className="flex w-full items-center px-3 py-2 text-left text-sm text-foreground/80 transition-colors hover:bg-muted"
+              className="flex w-full items-center px-3 py-2.5 text-left text-sm text-muted-foreground transition-colors hover:bg-surface-muted hover:text-foreground"
             >
               {s}
             </button>

@@ -1,28 +1,26 @@
-import { Hero } from "@/components/Hero";
-import { FeatureRow } from "@/components/FeatureRow";
 import { JsonLd } from "@/components/JsonLd";
-
-const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL || "https://seoprompt.ai";
+import { Hero } from "@/components/home/Hero";
+import { HowItWorks } from "@/components/home/HowItWorks";
+import { Deliverables } from "@/components/home/Deliverables";
+import { SamplePrompt } from "@/components/home/SamplePrompt";
+import { PricingCard } from "@/components/home/PricingCard";
+import { Faq, FAQ_ITEMS } from "@/components/home/Faq";
+import { FinalCta } from "@/components/home/FinalCta";
+import { PRICE, SITE_NAME, SITE_URL } from "@/lib/product";
 
 const websiteJsonLd = {
   "@context": "https://schema.org",
   "@type": "WebSite",
-  name: "SEO Prompt Generator",
+  name: SITE_NAME,
   url: SITE_URL,
   description:
-    "Describe your project and get a complete SEO plan including keywords, content structure, metadata, and optimization instructions.",
-  potentialAction: {
-    "@type": "SearchAction",
-    target: `${SITE_URL}/generate`,
-    "query-input": "required name=search_term_string",
-  },
+    "Describe your page and get a complete SEO implementation prompt — keywords, metadata, schema, technical SEO, and Core Web Vitals targets.",
 };
 
 const organizationJsonLd = {
   "@context": "https://schema.org",
   "@type": "Organization",
-  name: "SEO Prompt Generator",
+  name: SITE_NAME,
   url: SITE_URL,
   logo: `${SITE_URL}/android-chrome-192x192.png`,
   founder: {
@@ -32,27 +30,46 @@ const organizationJsonLd = {
   },
 };
 
-const breadcrumbJsonLd = {
+const productJsonLd = {
   "@context": "https://schema.org",
-  "@type": "BreadcrumbList",
-  itemListElement: [
-    {
-      "@type": "ListItem",
-      position: 1,
-      name: "Home",
-      item: SITE_URL,
-    },
-  ],
+  "@type": "Product",
+  name: "SEO implementation prompt",
+  description:
+    "A complete, structured SEO implementation prompt for one page: keyword strategy, metadata, structured data, content architecture, technical SEO, and Core Web Vitals targets.",
+  brand: { "@type": "Brand", name: SITE_NAME },
+  offers: {
+    "@type": "Offer",
+    price: PRICE.amount,
+    priceCurrency: PRICE.currency,
+    availability: "https://schema.org/InStock",
+    url: `${SITE_URL}/generate`,
+  },
+};
+
+const faqJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: FAQ_ITEMS.map((item) => ({
+    "@type": "Question",
+    name: item.question,
+    acceptedAnswer: { "@type": "Answer", text: item.answer },
+  })),
 };
 
 export default function Home() {
   return (
-    <div className="min-h-full overflow-x-hidden">
+    <>
       <JsonLd data={websiteJsonLd} />
       <JsonLd data={organizationJsonLd} />
-      <JsonLd data={breadcrumbJsonLd} />
+      <JsonLd data={productJsonLd} />
+      <JsonLd data={faqJsonLd} />
       <Hero />
-      <FeatureRow />
-    </div>
+      <HowItWorks />
+      <Deliverables />
+      <SamplePrompt />
+      <PricingCard />
+      <Faq />
+      <FinalCta />
+    </>
   );
 }

@@ -7,10 +7,7 @@ import { Analytics } from "@/components/Analytics";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { PaymentRedirectHandler } from "@/components/PaymentRedirectHandler";
-
-const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL || "https://seoprompt.ai";
-const SITE_NAME = "SEO Prompt Generator";
+import { SITE_NAME, SITE_URL } from "@/lib/product";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -28,19 +25,19 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#fafafa" },
-    { media: "(prefers-color-scheme: dark)", color: "#1a1a2e" },
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#0b0f0d" },
   ],
 };
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: `${SITE_NAME} — Generate Complete SEO Strategies`,
+    default: `${SITE_NAME} — A Complete SEO Plan in One Prompt`,
     template: `%s | ${SITE_NAME}`,
   },
   description:
-    "Describe your project and get a complete SEO plan including keywords, content structure, metadata, and optimization instructions — in one prompt.",
+    "Describe your page and get a complete SEO implementation prompt — keyword strategy, metadata, JSON-LD schema, technical SEO, and Core Web Vitals targets. One payment, no account.",
   applicationName: SITE_NAME,
   authors: [{ name: "Suhail Roushan", url: "https://suhailroushan.com" }],
   creator: "Suhail Roushan",
@@ -60,9 +57,9 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     siteName: SITE_NAME,
-    title: `${SITE_NAME} — Generate Complete SEO Strategies`,
+    title: `${SITE_NAME} — A Complete SEO Plan in One Prompt`,
     description:
-      "Describe your project and get a complete SEO plan including keywords, content structure, metadata, and optimization instructions.",
+      "Describe your page and get a complete SEO implementation prompt: keywords, metadata, schema, technical SEO, and Core Web Vitals targets.",
     url: SITE_URL,
     images: [
       {
@@ -76,9 +73,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: `${SITE_NAME} — Generate Complete SEO Strategies`,
+    title: `${SITE_NAME} — A Complete SEO Plan in One Prompt`,
     description:
-      "Generate complete SEO strategies in one prompt. Keywords, content structure, metadata, and optimization.",
+      "Describe your page and get a complete SEO implementation prompt: keywords, metadata, schema, technical SEO, and Core Web Vitals targets.",
     images: ["/og-image.png"],
   },
   robots: {
@@ -135,7 +132,7 @@ export default function RootLayout({
           crossOrigin="anonymous"
         />
       </head>
-      <body className="font-sans antialiased flex flex-col min-h-screen">
+      <body className="flex min-h-screen flex-col font-sans antialiased">
         <Suspense fallback={null}>
           <PaymentRedirectHandler />
         </Suspense>

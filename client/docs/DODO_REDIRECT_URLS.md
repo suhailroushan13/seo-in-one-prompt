@@ -1,102 +1,131 @@
-# Dodo Payments — Single redirect URL
+# Dodo Payments — checkout, redirect, and webhook setup
 
-**Domain:** `https://seopromptai.com/`
-
-You can configure **only one redirect URL** in Dodo. Use the URL below for both success and failure; the page shows the right message based on the `status` query parameter.
-
-**Note:** If Dodo redirects to the home page with payment query params (e.g. `/?status=succeeded&email=...`), the app redirects **instantly** to `/payment/result` via server middleware so the user never sees the home page. For the best experience, configure Dodo to redirect directly to `https://seopromptai.com/payment/result?...` with the same query params.
+How money turns into a delivered prompt, and what to configure in the Dodo
+dashboard so it works end to end.
 
 ---
 
-## The one URL to add in Dodo
+## The flow
 
-**Redirect URL:**
+1. **Order created.** `POST /api/checkout/session` stores the generated prompt
+   with the buyer's email and returns an unguessable order id (`ord_<hex>`).
+2. **Redirect to checkout.** The browser navigates to the hosted checkout URL
+   built by `src/lib/checkout.ts`:
 
-```
-https://seopromptai.com/payment/result
-```
+   ```
+   https://dodo.pe/seopromptai
+     ?redirect_url=https%3A%2F%2Fseopromptai.com%2Fpayment%2Fresult%3Forder%3Dord_xxx
+     &metadata_orderId=ord_xxx
+     &email=buyer%40example.com
+     &fullName=Jane%20Doe
+   ```
 
-Always send users to this URL. Append query parameters so the page knows whether payment succeeded or failed.
-
----
-
-## Query parameters (append to the URL)
-
-Use **`status`** to choose success vs failure. Add other params as needed.
-
-### When payment succeeds
-
-Redirect to:
-
-```
-https://seopromptai.com/payment/result?status=success
-```
-
-Optional params (all are saved to the database and shown on the success page):
-
-| Param         | Example            | Description |
-|---------------|--------------------|-------------|
-| `email`       | `user@example.com` | Customer email; required for saving the payment. |
-| `name`        | `John Doe`         | Customer name; shown and stored. |
-| `payment_id`  | `pay_xxx`          | Payment ID from Dodo; stored for reference. |
-| `amount`      | `9.99`             | Payment amount; shown and stored (e.g. for receipt). |
-| `currency`    | `USD`              | Currency code (default: USD). |
-
-**Example:**
-
-```
-https://seopromptai.com/payment/result?status=success&email=user@example.com&payment_id=pay_xxx&name=John&amount=9.99
-```
+   `metadata_orderId` is what the webhook reads. `redirect_url` is what the
+   browser comes back to.
+3. **Webhook confirms (authoritative).** Dodo calls
+   `POST /api/payment/webhook`. The order is marked paid and the email with the
+   PDF + Markdown attachments is sent. This path runs even if the buyer closes
+   the tab.
+4. **Redirect lands (cosmetic).** The buyer arrives at `/payment/result`, which
+   reads the order by id, polls briefly for the webhook, and — if the webhook
+   has not arrived — completes the order itself via
+   `POST /api/payment/complete`. Completion is idempotent, so both paths racing
+   is safe.
+5. **Permanent link.** The result page shows `/delivery/<orderId>`, which
+   re-renders the prompt and can re-send the email at any time.
 
 ---
 
-### When payment fails or user cancels
+## What to set in the Dodo dashboard
 
-Redirect to:
+| Setting | Value |
+|---|---|
+| **Return / redirect URL** | `https://seopromptai.com/payment/result` |
+| **Webhook URL** | `https://seopromptai.com/api/payment/webhook` |
+| **Webhook signing secret** | copy into `DODO_WEBHOOK_SECRET` |
 
+The app appends `redirect_url` and `metadata_orderId` per checkout, so a static
+redirect URL in the dashboard is only the fallback.
+
+### Webhook secret is required
+
+`/api/payment/webhook` returns **503** when `DODO_WEBHOOK_SECRET` is unset and
+**401** on a bad signature. Signatures follow the Standard Webhooks scheme:
+`HMAC-SHA256` over `{webhook-id}.{webhook-timestamp}.{raw body}`, with a 5-minute
+timestamp tolerance. Never disable this check — the endpoint delivers paid goods.
+
+### Webhook events consumed
+
+| Event type matches | Effect |
+|---|---|
+| `succeeded`, `completed`, `paid` | Order marked paid, prompt emailed |
+| `failed`, `cancelled`, `canceled`, `expired` | Order marked failed (needs `metadata.orderId`) |
+
+Expected payload shape:
+
+```json
+{
+  "type": "payment.succeeded",
+  "data": {
+    "payment_id": "pay_xxx",
+    "total_amount": 900,
+    "currency": "USD",
+    "customer": { "email": "buyer@example.com", "name": "Jane Doe" },
+    "metadata": { "orderId": "ord_xxx" }
+  }
+}
 ```
-https://seopromptai.com/payment/result?status=failure
-```
 
-Optional param:
-
-| Param    | Example       | Description |
-|----------|---------------|-------------|
-| `reason` | `cancelled`    | Use `cancelled`, `payment_failed`, `declined`, or `expired`. |
-| `error`  | `card_declined`| Alternative to `reason` if Dodo sends an error code. |
-
-**Examples:**
-
-- User cancelled:  
-  `https://seopromptai.com/payment/result?status=failure&reason=cancelled`
-- Payment failed:  
-  `https://seopromptai.com/payment/result?status=failure&reason=payment_failed`
+`total_amount` is read in minor units (900 → 9.00).
 
 ---
 
-## What to set in Dodo
+## Redirect query parameters
 
-| Setting in Dodo | Value |
-|-----------------|--------|
-| **Redirect URL** | `https://seopromptai.com/payment/result` |
+`/payment/result` accepts these; all are optional because the order id alone is
+enough to resolve state.
 
-Then, when redirecting after checkout:
+| Param | Example | Purpose |
+|---|---|---|
+| `order` | `ord_9f2c…` | Our order id. Best signal — set automatically via `redirect_url`. |
+| `status` | `success` / `succeeded` / `paid` / `failure` | Provider outcome. Anything not in the paid set is treated as failed. |
+| `payment_id` | `pay_xxx` | Used to complete the order when `order` is missing. |
+| `email` | `buyer@example.com` | Last-resort lookup key. |
+| `reason` | `cancelled`, `payment_failed`, `declined`, `expired` | Shown on the failure view. |
 
-- **Success:** redirect to  
-  `https://seopromptai.com/payment/result?status=success&email={customer_email}`  
-  (add `&session_id=...` if you have it)
-- **Failure / Cancel:** redirect to  
-  `https://seopromptai.com/payment/result?status=failure&reason=cancelled`  
-  or  
-  `https://seopromptai.com/payment/result?status=failure&reason=payment_failed`
-
-If Dodo only lets you set one static URL (no query params), set it to  
-`https://seopromptai.com/payment/result`.  
-The page will treat a missing `status` as failure and show “Payment unsuccessful”. For success, Dodo would need to redirect with at least `?status=success` (and ideally `email=...`).
+A missing `status` is **not** treated as failure. The page resolves the real
+state from the order record instead.
 
 ---
 
-## What the user sees
+## Legacy landing paths
 
-- **Success** (`status=success`): “Payment received” and “Check your inbox” — the SEO prompt is sent to the customer’s email as a **PDF** attachment. The attachment filename is `{brandname}-seo-prompt.pdf` (e.g. `zomato-seo-prompt.pdf`).
-- **Failure** (`status=failure` or no `status`): “Payment unsuccessful” plus a reason (cancelled, failed, declined, expired).
+`/success` and `/failure` still exist for checkout links configured before this
+flow. Both are server redirects that forward every query parameter to
+`/payment/result` (see `src/lib/resultRedirect.ts`), so old links keep working.
+The same is true of a redirect to the home page carrying payment params —
+`PaymentRedirectHandler` forwards those on the client.
+
+---
+
+## Testing
+
+```bash
+# Fails with 503 until DODO_WEBHOOK_SECRET is set, 401 without a valid signature.
+curl -i -X POST http://localhost:3000/api/payment/webhook \
+  -H 'content-type: application/json' -d '{"type":"payment.succeeded"}'
+
+# Resolve an order the way the result page does.
+curl -s http://localhost:3000/api/order/ord_xxx | jq
+```
+
+---
+
+## What the buyer sees
+
+- **Paid:** the full prompt on screen, section by section, with PDF / Markdown /
+  plain-text downloads, a copy button per section, a permanent
+  `/delivery/<orderId>` link, and the same files emailed as attachments.
+- **Pending:** a "payment is confirming" state that keeps polling; the email
+  arrives regardless once the webhook lands.
+- **Failed:** the reason, plus a retry link back to checkout.

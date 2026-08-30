@@ -1,64 +1,61 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { ArrowRight, Loader2, ShieldCheck, Trash2 } from "lucide-react";
 import { StepWizard } from "@/components/wizard/StepWizard";
+import { PromptViewer } from "@/components/common/PromptViewer";
 import { addToHistory } from "@/components/HistorySidebar";
 import { buildPrompt } from "@/lib/promptBuilder";
+import { DELIVERABLES, formatPrice } from "@/lib/product";
 import type { FormState } from "@/lib/types";
 import { getDefaultFormState } from "@/lib/types";
 import {
-  loadFormFromStorage,
-  saveFormToStorage,
-  loadUserFromStorage,
-  saveUserToStorage,
   clearFormAndUserStorage,
-  savePendingPrompt,
+  loadFormFromStorage,
   loadGeneratedPrompt,
+  loadUserFromStorage,
+  saveFormToStorage,
   saveGeneratedPrompt,
+  saveLastOrder,
+  saveUserToStorage,
 } from "@/lib/formStorage";
-import { ArrowLeft, ArrowRight, Trash2, Loader2 } from "lucide-react";
 
-const NEXT_STEP_URL = "https://dodo.pe/seopromptai";
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 export default function GeneratePage() {
   const [form, setForm] = useState<FormState>(getDefaultFormState);
   const [hasHydrated, setHasHydrated] = useState(false);
-  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
+  const [emailError, setEmailError] = useState<string | null>(null);
   const [generatedPrompt, setGeneratedPrompt] = useState("");
-  const [showResult, setShowResult] = useState(false);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [isRedirecting, setIsRedirecting] = useState(false);
+  const saveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     setForm(loadFormFromStorage());
     const user = loadUserFromStorage();
     setFullName(user.fullName);
     setEmail(user.email);
-    const savedPrompt = loadGeneratedPrompt();
-    if (savedPrompt?.trim()) {
-      setGeneratedPrompt(savedPrompt.trim());
-      setShowResult(true);
-    }
+    const saved = loadGeneratedPrompt();
+    if (saved?.trim()) setGeneratedPrompt(saved.trim());
     setHasHydrated(true);
   }, []);
 
   useEffect(() => {
     if (!hasHydrated) return;
-    saveTimeoutRef.current = setTimeout(() => {
-      saveFormToStorage(form);
-      saveTimeoutRef.current = null;
-    }, 400);
+    saveTimeout.current = setTimeout(() => saveFormToStorage(form), 400);
     return () => {
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+      if (saveTimeout.current) clearTimeout(saveTimeout.current);
     };
   }, [form, hasHydrated]);
 
   useEffect(() => {
     if (!hasHydrated) return;
-    const t = setTimeout(() => saveUserToStorage({ fullName, email }), 400);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => saveUserToStorage({ fullName, email }), 400);
+    return () => clearTimeout(timer);
   }, [fullName, email, hasHydrated]);
 
   const update = useCallback(
@@ -71,229 +68,241 @@ export default function GeneratePage() {
   const handleGenerate = useCallback(() => {
     const prompt = buildPrompt(form);
     setGeneratedPrompt(prompt);
-    setShowResult(true);
     saveGeneratedPrompt(prompt);
-
-    const title =
-      [form.primaryKw, form.pageType].filter(Boolean).join(" — ") ||
-      "Untitled Prompt";
     addToHistory({
       id: crypto.randomUUID(),
-      title,
+      title:
+        [form.primaryKw, form.pageType].filter(Boolean).join(" — ") ||
+        "Untitled prompt",
       prompt,
       createdAt: new Date().toISOString(),
     });
-
-    setTimeout(() => {
+    requestAnimationFrame(() => {
       document
-        .getElementById("result-section")
+        .getElementById("result")
         ?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 100);
+    });
   }, [form]);
 
-  const handleSubmit = async () => {
-    if (!generatedPrompt?.trim() || !email?.trim()) return;
-    setIsRedirecting(true);
+  const handleCheckout = async () => {
     const trimmedEmail = email.trim();
-    const trimmedName = fullName?.trim() ?? "";
-    const trimmedBrand = form.brandName?.trim() ?? "";
-    savePendingPrompt({
-      prompt: generatedPrompt.trim(),
-      fullName: trimmedName,
-      email: trimmedEmail,
-      brandName: trimmedBrand,
-    });
+    if (!EMAIL_PATTERN.test(trimmedEmail)) {
+      setEmailError("Enter a valid email — this is where your prompt is delivered.");
+      document.getElementById("checkout-email")?.focus();
+      return;
+    }
+    setEmailError(null);
+    setCheckoutError(null);
+    setIsRedirecting(true);
+
     try {
-      const res = await fetch("/api/payment/prepare", {
+      const response = await fetch("/api/checkout/session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           prompt: generatedPrompt.trim(),
           email: trimmedEmail,
-          fullName: trimmedName || undefined,
-          brandName: trimmedBrand || undefined,
+          fullName: fullName.trim() || undefined,
+          brandName: form.brandName.trim() || undefined,
         }),
       });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        alert(data?.error ?? "Could not save prompt. Try again.");
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok || !data?.checkoutUrl) {
+        setCheckoutError(
+          typeof data?.error === "string"
+            ? data.error
+            : "Could not start checkout. Please try again."
+        );
         setIsRedirecting(false);
         return;
       }
-      window.location.href = NEXT_STEP_URL;
+
+      saveLastOrder({
+        orderId: data.orderId,
+        email: trimmedEmail,
+        brandName: form.brandName.trim(),
+        createdAt: new Date().toISOString(),
+      });
+      window.location.href = data.checkoutUrl;
     } catch {
-      alert("Could not save prompt. Try again.");
+      setCheckoutError("Network error. Check your connection and try again.");
       setIsRedirecting(false);
     }
   };
 
-  const handleClearAll = useCallback(() => {
+  const handleClearAll = () => {
     setForm(getDefaultFormState());
     setFullName("");
     setEmail("");
     setGeneratedPrompt("");
-    setShowResult(false);
+    setCheckoutError(null);
+    setEmailError(null);
     clearFormAndUserStorage();
-  }, []);
+  };
 
   return (
-    <div className="min-h-full">
-      <header className="border-b border-border/50 px-3 py-3 sm:px-6">
-        <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-2 sm:gap-4">
-          <Link
-            href="/"
-            className="inline-flex min-h-11 min-w-11 shrink-0 cursor-pointer items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring touch-manipulation"
-            aria-label="Back to home"
-          >
-            <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden />
-            <span className="hidden sm:inline">Back to home</span>
-          </Link>
+    <div className="shell py-10 sm:py-14">
+      <div className="mx-auto max-w-4xl">
+        <header className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <span className="pill">Step 1 — build your prompt</span>
+            <h1 className="mt-4 text-3xl font-semibold tracking-tight sm:text-4xl">
+              Describe your page
+            </h1>
+            <p className="mt-2 max-w-xl text-sm text-muted-foreground">
+              Everything you enter stays in your browser until you choose to
+              continue. Only the two required fields are strictly needed — the
+              rest sharpen the output.
+            </p>
+          </div>
           <button
             type="button"
             onClick={handleClearAll}
-            className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center gap-2 rounded-lg border border-border bg-transparent px-3 py-2.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring touch-manipulation"
-            aria-label="Clear all fields and local storage"
+            className="btn btn-ghost"
+            aria-label="Clear every field and the saved draft"
           >
-            <Trash2 className="h-4 w-4 shrink-0" aria-hidden />
-            <span className="hidden sm:inline">Clear all</span>
+            <Trash2 className="h-4 w-4" aria-hidden />
+            Clear all
           </button>
+        </header>
+
+        <div className="mt-8">
+          <StepWizard form={form} update={update} onGenerate={handleGenerate} />
         </div>
-      </header>
 
-      <section
-        className="px-3 pb-24 pt-6 sm:px-6 sm:pt-8"
-        aria-label="Generate SEO prompt"
-      >
-        <div className="mx-auto max-w-2xl">
-          <div className="space-y-6">
-            <StepWizard
-              form={form}
-              update={update}
-              onGenerate={handleGenerate}
-            />
-            {/* <HistorySidebar onLoad={handleLoadFromHistory} /> */}
-          </div>
-
-          {showResult && generatedPrompt && (
-            <div
-              id="result-section"
-              className="mt-12 scroll-mt-24 space-y-8"
-              aria-labelledby="result-heading"
-            >
-              <h2 id="result-heading" className="sr-only">
-                Your prompt is ready
-              </h2>
-
-              {/* Actions: Copy & Download — always available and clickable */}
-              {/* <section
-                className="rounded-xl border border-border bg-card p-4 shadow-sm sm:p-5"
-                aria-label="Prompt actions"
-              >
-                <p className="mb-4 text-sm font-medium text-foreground/90">
-                  Your prompt is ready. Copy or save it below.
+        {generatedPrompt && (
+          <section id="result" className="mt-16 scroll-mt-24">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <span className="pill">Step 2 — your prompt</span>
+                <h2 className="mt-4 text-2xl font-semibold tracking-tight">
+                  Preview
+                </h2>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Read it, copy it, and download the formats you need.
                 </p>
-                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                  <button
-                    type="button"
-                    onClick={handleCopy}
-                    className="inline-flex min-h-10 min-w-[44px] cursor-pointer items-center justify-center gap-2 rounded-xl bg-foreground px-4 py-2.5 text-sm font-medium text-background transition-transform hover:opacity-90 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none"
-                    aria-label="Copy prompt to clipboard"
-                  >
-                    {copied ? (
-                      <Check className="h-4 w-4 shrink-0" aria-hidden />
-                    ) : (
-                      <Copy className="h-4 w-4 shrink-0" aria-hidden />
-                    )}
-                    <span>{copied ? "Copied" : "Copy prompt"}</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleDownload}
-                    className="inline-flex min-h-10 min-w-[44px] cursor-pointer items-center justify-center gap-2 rounded-xl border border-border bg-transparent px-4 py-2.5 text-sm font-medium text-foreground transition-transform hover:bg-muted active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                    aria-label="Download prompt as Markdown file"
-                  >
-                    <Download className="h-4 w-4 shrink-0" aria-hidden />
-                    <span>Download .md</span>
-                  </button>
-                </div>
-              </section> */}
+              </div>
+            </div>
 
-              {/* Next step form — neutral labels, single primary button */}
-              <section
-                className="rounded-xl border border-border bg-card p-4 shadow-sm sm:p-6"
-                aria-labelledby="next-step-heading"
-              >
-                <h3
-                  id="next-step-heading"
-                  className="text-base font-semibold text-foreground sm:text-lg"
-                >
-                  Next step
-                </h3>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Enter your name and email to proceed.
-                </p>
-                <div className="mt-5 grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <label
-                      htmlFor="generate-fullName"
-                      className="mb-1.5 block text-sm font-medium text-foreground/80"
-                    >
-                      Name
-                    </label>
-                    <input
-                      id="generate-fullName"
-                      type="text"
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      placeholder="e.g. John Doe"
-                      className="h-10 w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30"
-                      autoComplete="name"
-                    />
+            <div className="mt-6">
+              <PromptViewer
+                prompt={generatedPrompt}
+                brandName={form.brandName}
+                fullName={fullName}
+                email={email}
+              />
+            </div>
+
+            <div className="card-surface mt-10 overflow-hidden">
+              <div className="grid gap-0 md:grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)]">
+                <div className="border-b border-border p-6 md:border-b-0 md:border-r sm:p-8">
+                  <h3 className="text-lg font-semibold tracking-tight">
+                    Step 3 — get it delivered
+                  </h3>
+                  <p className="mt-1.5 text-sm text-muted-foreground">
+                    We email your prompt as a PDF and a Markdown file, and keep a
+                    permanent link you can reopen any time.
+                  </p>
+
+                  <div className="mt-6 grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <label htmlFor="checkout-name" className="field-label">
+                        Name
+                      </label>
+                      <input
+                        id="checkout-name"
+                        type="text"
+                        autoComplete="name"
+                        className="field-control"
+                        placeholder="Jane Doe"
+                        value={fullName}
+                        onChange={(event) => setFullName(event.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label htmlFor="checkout-email" className="field-label">
+                        Email <span className="text-destructive">*</span>
+                      </label>
+                      <input
+                        id="checkout-email"
+                        type="email"
+                        autoComplete="email"
+                        className="field-control"
+                        placeholder="jane@company.com"
+                        value={email}
+                        aria-invalid={Boolean(emailError) || undefined}
+                        aria-describedby={emailError ? "checkout-email-error" : undefined}
+                        onChange={(event) => {
+                          setEmail(event.target.value);
+                          if (emailError) setEmailError(null);
+                        }}
+                      />
+                      {emailError && (
+                        <p id="checkout-email-error" className="field-error" role="alert">
+                          {emailError}
+                        </p>
+                      )}
+                    </div>
                   </div>
-                  <div>
-                    <label
-                      htmlFor="generate-email"
-                      className="mb-1.5 block text-sm font-medium text-foreground/80"
-                    >
-                      Email
-                    </label>
-                    <input
-                      id="generate-email"
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="e.g. We don't spam you "
-                      className="h-10 w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30"
-                      autoComplete="email"
-                    />
-                  </div>
-                </div>
-                <div className="mt-5">
+
                   <button
                     type="button"
-                    onClick={handleSubmit}
-                    disabled={!generatedPrompt?.trim() || !email?.trim() || isRedirecting}
-                    className="w-full min-h-12 sm:w-auto sm:min-w-[44px] inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-foreground px-5 py-3 text-sm font-medium text-background shadow-md transition-transform duration-200 hover:scale-[1.02] hover:opacity-90 hover:shadow-lg active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 touch-manipulation"
-                    aria-label={isRedirecting ? "Redirecting to payment" : "Proceed to next step"}
+                    onClick={handleCheckout}
+                    disabled={isRedirecting || !generatedPrompt.trim()}
+                    className="btn btn-brand btn-lg mt-6 w-full"
                   >
                     {isRedirecting ? (
                       <>
-                        <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
-                        <span>Redirecting…</span>
+                        <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                        Opening secure checkout…
                       </>
                     ) : (
                       <>
-                        <span>Submit</span>
-                        <ArrowRight className="h-4 w-4 shrink-0" aria-hidden />
+                        Continue to checkout — {formatPrice()}
+                        <ArrowRight className="h-4 w-4" aria-hidden />
                       </>
                     )}
                   </button>
+
+                  {checkoutError && (
+                    <p className="field-error mt-3" role="alert">
+                      {checkoutError}
+                    </p>
+                  )}
+
+                  <p className="field-hint mt-3 flex items-center gap-1.5">
+                    <ShieldCheck className="h-3.5 w-3.5 text-brand" aria-hidden />
+                    Hosted checkout. Card details never reach our servers.
+                  </p>
                 </div>
-              </section>
+
+                <div className="bg-surface-muted p-6 sm:p-8">
+                  <h4 className="field-label">Included</h4>
+                  <ul className="mt-4 space-y-2.5">
+                    {DELIVERABLES.map((item) => (
+                      <li
+                        key={item}
+                        className="flex items-start gap-2.5 text-sm leading-relaxed text-muted-foreground"
+                      >
+                        <span aria-hidden className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-brand" />
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="field-hint mt-6">
+                    Questions first?{" "}
+                    <Link href="/help" className="text-brand underline-offset-4 hover:underline">
+                      Read the help page
+                    </Link>
+                    .
+                  </p>
+                </div>
+              </div>
             </div>
-          )}
-        </div>
-      </section>
+          </section>
+        )}
+      </div>
     </div>
   );
 }

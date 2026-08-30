@@ -7,12 +7,14 @@ interface TagInputProps {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
+  id?: string;
 }
 
 export function TagInput({
   value,
   onChange,
   placeholder = "Type and press Enter",
+  id,
 }: TagInputProps) {
   const [input, setInput] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -47,13 +49,14 @@ export function TagInput({
 
   return (
     <div
-      className="flex min-h-10 flex-wrap items-center gap-1.5 rounded-lg border border-input bg-transparent px-2.5 py-1.5 transition-colors focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 dark:bg-input/30"
+      className="flex min-h-11 flex-wrap items-center gap-1.5 rounded-lg border bg-transparent px-2.5 py-1.5 transition-colors focus-within:border-brand focus-within:ring-2 focus-within:ring-brand-ring"
+      style={{ borderColor: "var(--input)" }}
       onClick={() => inputRef.current?.focus()}
     >
       {tags.map((tag, i) => (
         <span
           key={`${tag}-${i}`}
-          className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-foreground"
+          className="inline-flex items-center gap-1 rounded-md bg-brand-muted px-2 py-1 text-xs font-medium text-foreground"
         >
           {tag}
           <button
@@ -62,6 +65,7 @@ export function TagInput({
               e.stopPropagation();
               removeTag(i);
             }}
+            aria-label={`Remove ${tag}`}
             className="rounded-sm p-0.5 text-muted-foreground transition-colors hover:text-foreground"
           >
             <X className="h-3 w-3" />
@@ -70,6 +74,7 @@ export function TagInput({
       ))}
       <input
         ref={inputRef}
+        id={id}
         type="text"
         value={input}
         onChange={(e) => setInput(e.target.value)}

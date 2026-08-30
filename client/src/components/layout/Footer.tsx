@@ -1,66 +1,77 @@
-"use client";
-
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { Logo } from "@/components/common/Logo";
+import { SITE_NAME } from "@/lib/product";
 
-const footerLinks = [
-  { href: "/generate", label: "Generate" },
-  { href: "/help", label: "Help" },
-  { href: "/examples", label: "Examples" },
-  { href: "/docs", label: "Docs" },
-  { href: "/pricing", label: "Pricing" },
+const COLUMNS = [
+  {
+    title: "Product",
+    links: [
+      { href: "/generate", label: "Generate a prompt" },
+      { href: "/examples", label: "Examples" },
+      { href: "/pricing", label: "Pricing" },
+      { href: "/how", label: "How it works" },
+    ],
+  },
+  {
+    title: "Support",
+    links: [
+      { href: "/docs", label: "Documentation" },
+      { href: "/help", label: "Help centre" },
+      { href: "mailto:support@seopromptai.com", label: "Email support" },
+    ],
+  },
 ];
 
 export function Footer() {
-  const [, setViews] = useState<number | null>(null);
-
-  useEffect(() => {
-    fetch("/api/views", { method: "POST" })
-      .then((res) => res.json())
-      .then((data) => setViews(typeof data.views === "number" ? data.views : null))
-      .catch(() => setViews(null));
-  }, []);
+  const year = new Date().getFullYear();
 
   return (
-    <footer
-      className="border-t border-border/50 bg-muted/20"
-      role="contentinfo"
-    >
-      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6">
-        <div className="flex flex-col items-center gap-6 text-center">
-          <nav aria-label="Footer navigation">
-            <ul className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
-              {footerLinks.map((link) => (
-                <li key={link.href}>
-                  <Link
-                    href={link.href}
-                    className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-                  >
-                    {link.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </nav>
-          <div className="space-y-1">
-            <p className="text-sm text-muted-foreground">
-              Best tool to generate SEO prompts. No sign-up, no tracking.
-            </p>
-            <p className="text-sm text-muted-foreground">
-              Built by{" "}
-              <Link
-                href="https://suhailroushan.com"
-                target="_blank"
-                rel="noopener"
-                className="font-medium text-foreground underline-offset-4 hover:underline"
-              >
-                Suhail Roushan
-              </Link>
+    <footer className="mt-24 border-t border-border bg-surface-muted" role="contentinfo">
+      <div className="shell py-14">
+        <div className="grid gap-10 md:grid-cols-[minmax(0,1.4fr)_repeat(2,minmax(0,1fr))]">
+          <div className="space-y-4">
+            <Logo />
+            <p className="max-w-xs text-sm leading-relaxed text-muted-foreground">
+              One structured, copy-ready SEO prompt for your page. No sign-up, no
+              subscription, no tracking.
             </p>
           </div>
-          <p className="text-xs text-muted-foreground/60">
-            &copy; {new Date().getFullYear()} SEO Prompt Generator. All rights
-            reserved.
+
+          {COLUMNS.map((column) => (
+            <nav key={column.title} aria-label={column.title}>
+              <h2 className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                {column.title}
+              </h2>
+              <ul className="mt-4 space-y-2.5">
+                {column.links.map((link) => (
+                  <li key={link.href}>
+                    <Link
+                      href={link.href}
+                      className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+                    >
+                      {link.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          ))}
+        </div>
+
+        <div className="mt-12 flex flex-col gap-3 border-t border-border pt-6 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-xs text-muted-foreground">
+            © {year} {SITE_NAME}. All rights reserved.
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Built by{" "}
+            <Link
+              href="https://suhailroushan.com"
+              target="_blank"
+              rel="noopener"
+              className="font-medium text-foreground underline-offset-4 hover:underline"
+            >
+              Suhail Roushan
+            </Link>
           </p>
         </div>
       </div>

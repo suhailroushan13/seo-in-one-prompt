@@ -1,80 +1,106 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
-import { useState, useEffect } from "react";
-import { Sun, Moon, HelpCircle, BookOpen } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
+import { Menu, X } from "lucide-react";
+import { Logo } from "@/components/common/Logo";
+import { ThemeToggle } from "@/components/common/ThemeToggle";
+
+const NAV_LINKS = [
+  { href: "/how", label: "How it works" },
+  { href: "/examples", label: "Examples" },
+  { href: "/pricing", label: "Pricing" },
+  { href: "/docs", label: "Docs" },
+  { href: "/help", label: "Help" },
+];
 
 export function Navbar() {
-  const [dark, setDark] = useState(false);
+  const pathname = usePathname();
+  const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    const isDark =
-      localStorage.getItem("theme") === "dark" ||
-      (!localStorage.getItem("theme") &&
-        window.matchMedia("(prefers-color-scheme: dark)").matches);
-    setDark(isDark);
-    document.documentElement.classList.toggle("dark", isDark);
-  }, []);
+    setOpen(false);
+  }, [pathname]);
 
-  const toggleTheme = () => {
-    const next = !dark;
-    setDark(next);
-    document.documentElement.classList.toggle("dark", next);
-    localStorage.setItem("theme", next ? "dark" : "light");
-  };
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open]);
+
+  const isActive = (href: string) =>
+    pathname === href || pathname.startsWith(`${href}/`);
 
   return (
-    <nav
-      className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl"
-      aria-label="Main navigation"
-    >
-      <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-3 px-4 sm:px-6">
-        <Link
-          href="/"
-          className="flex min-w-0 shrink-0 items-center gap-2"
-          aria-label="SEO Prompt Generator home"
-        >
-          <Image
-            src="/favicon-32x32.png"
-            alt="SEO Prompt Generator logo"
-            width={28}
-            height={28}
-            className="shrink-0 rounded-lg"
-            priority
-          />
-          <span className="truncate text-sm font-semibold tracking-tight sm:max-w-[200px]">
-            SEO Prompt Generator
-          </span>
-        </Link>
+    <header className="sticky top-0 z-50 border-b border-border/70 bg-background/80 backdrop-blur-xl">
+      <div className="shell flex h-16 items-center justify-between gap-4">
+        <Logo />
 
-        <div className="flex shrink-0 items-center gap-1 sm:gap-2">
-          <Link
-            href="/how"
-            className="cursor-pointer inline-flex min-h-9 min-w-9 items-center justify-center gap-1.5 rounded-lg px-2.5 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:px-3"
-            aria-label="How to use"
-          >
-            <BookOpen className="h-4 w-4 shrink-0" aria-hidden />
-            <span className="hidden sm:inline">How to use</span>
-          </Link>
-          <Link
-            href="/help"
-            className="inline-flex min-h-9 min-w-9 items-center justify-center gap-1.5 rounded-lg px-2.5 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:px-3"
-            aria-label="Need help - how to use the form"
-          >
-            <HelpCircle className="h-4 w-4 shrink-0" aria-hidden />
-            <span className="hidden sm:inline">Need help</span>
+        <nav aria-label="Main" className="hidden items-center gap-1 md:flex">
+          {NAV_LINKS.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              aria-current={isActive(link.href) ? "page" : undefined}
+              className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                isActive(link.href)
+                  ? "bg-surface-muted text-foreground"
+                  : "text-muted-foreground hover:bg-surface-muted hover:text-foreground"
+              }`}
+            >
+              {link.label}
+            </Link>
+          ))}
+        </nav>
+
+        <div className="flex items-center gap-2">
+          <ThemeToggle className="hidden sm:inline-flex" />
+          <Link href="/generate" className="btn btn-brand hidden sm:inline-flex">
+            Start now
           </Link>
           <button
             type="button"
-            onClick={toggleTheme}
-            className="cursor-pointer rounded-md p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            aria-label="Toggle theme"
+            onClick={() => setOpen((value) => !value)}
+            aria-expanded={open}
+            aria-controls="mobile-nav"
+            aria-label={open ? "Close menu" : "Open menu"}
+            className="btn btn-ghost h-11 w-11 px-0 md:hidden"
           >
-            {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            {open ? <X className="h-5 w-5" aria-hidden /> : <Menu className="h-5 w-5" aria-hidden />}
           </button>
         </div>
       </div>
-    </nav>
+
+      {open && (
+        <div id="mobile-nav" className="border-t border-border bg-background md:hidden">
+          <nav aria-label="Mobile" className="shell flex flex-col gap-1 py-4">
+            {NAV_LINKS.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                aria-current={isActive(link.href) ? "page" : undefined}
+                className={`rounded-lg px-3 py-3 text-sm font-medium transition-colors ${
+                  isActive(link.href)
+                    ? "bg-surface-muted text-foreground"
+                    : "text-muted-foreground hover:bg-surface-muted hover:text-foreground"
+                }`}
+              >
+                {link.label}
+              </Link>
+            ))}
+            <div className="mt-3 flex items-center justify-between gap-3">
+              <ThemeToggle />
+              <Link href="/generate" className="btn btn-brand flex-1">
+                Start now
+              </Link>
+            </div>
+          </nav>
+        </div>
+      )}
+    </header>
   );
 }

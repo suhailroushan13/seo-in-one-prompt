@@ -1,11 +1,13 @@
 "use client";
 
-import { usePathname, useSearchParams, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect } from "react";
+import { isPaidStatus } from "@/lib/checkout";
 
 /**
- * When Dodo (or another payment provider) redirects to e.g. /?payment_id=...&status=succeeded&email=...,
- * redirect to the custom payment result page so the user sees success/failure UI.
+ * Payment providers redirect back to whatever URL they were configured with —
+ * often the site root, e.g. `/?payment_id=...&status=succeeded&order=ord_...`.
+ * Forward any such landing to the receipt page with the parameters intact.
  */
 export function PaymentRedirectHandler() {
   const pathname = usePathname();
@@ -15,26 +17,22 @@ export function PaymentRedirectHandler() {
   useEffect(() => {
     if (pathname === "/payment/result") return;
 
+    const orderId = searchParams.get("order") ?? searchParams.get("metadata_orderId");
     const status = searchParams.get("status");
     const paymentId = searchParams.get("payment_id");
     const email = searchParams.get("email");
-    const name = searchParams.get("name");
-    const amount = searchParams.get("amount");
-    const reason = searchParams.get("reason") || searchParams.get("error");
+    const reason = searchParams.get("reason") ?? searchParams.get("error");
 
-    const hasPaymentParams = status != null || paymentId != null;
-    if (!hasPaymentParams) return;
-
-    const succeeded = /^(succeeded|success|paid|completed)$/i.test(status ?? "");
-    const resultStatus = succeeded ? "success" : "failure";
+    if (!status && !paymentId && !orderId) return;
 
     const params = new URLSearchParams();
-    params.set("status", resultStatus);
-    if (email) params.set("email", email);
+    if (orderId) params.set("order", orderId);
     if (paymentId) params.set("payment_id", paymentId);
-    if (name) params.set("name", name);
-    if (amount) params.set("amount", amount);
-    if (!succeeded && reason) params.set("reason", reason);
+    if (email) params.set("email", email);
+    // Only assert an outcome the provider actually reported; otherwise the
+    // receipt page resolves the real status from the server.
+    if (status) params.set("status", isPaidStatus(status) ? "success" : "failure");
+    if (reason && !isPaidStatus(status)) params.set("reason", reason);
 
     router.replace(`/payment/result?${params.toString()}`);
   }, [pathname, searchParams, router]);

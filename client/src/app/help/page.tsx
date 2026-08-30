@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowLeft, HelpCircle } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { ScrollToHash } from "@/components/ScrollToHash";
 import { JsonLd } from "@/components/JsonLd";
 import {
@@ -19,23 +19,24 @@ import {
   CDN_OPTIONS,
   ANALYTICS_OPTIONS,
 } from "@/lib/types";
+import { SITE_NAME, SITE_URL, formatPrice } from "@/lib/product";
 
 export const metadata: Metadata = {
   title: "Help",
   description:
-    "Learn what each form field means: brand, domain, keywords, content strategy, and output options. Examples and defaults for the SEO prompt generator.",
+    "What every wizard field means, with examples and defaults — plus how payment, delivery, and re-downloads work.",
   alternates: { canonical: "/help" },
   openGraph: {
-    title: "Help | SEO Prompt Generator",
+    title: `Help | ${SITE_NAME}`,
     description:
-      "Learn what each form field means with examples and defaults for the SEO prompt generator.",
+      "What every wizard field means, with examples and defaults — plus how payment and delivery work.",
     url: "/help",
     images: [
       {
         url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "SEO Prompt Generator — One prompt, full SEO plan",
+        alt: `${SITE_NAME} — one prompt, full SEO plan`,
       },
     ],
   },
@@ -44,9 +45,6 @@ export const metadata: Metadata = {
     images: ["/og-image.png"],
   },
 };
-
-const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL || "https://seoprompt.ai";
 
 const breadcrumbJsonLd = {
   "@context": "https://schema.org",
@@ -77,11 +75,11 @@ function HelpSection({
   children: React.ReactNode;
 }) {
   return (
-    <section id={id} className="scroll-mt-24 py-2 first:pt-0">
-      <h2 className="text-lg font-semibold text-foreground border-b border-border/60 pb-2 mb-4 sm:text-xl">
+    <section id={id} className="scroll-mt-24">
+      <h2 className="border-b border-border pb-3 text-xl font-semibold tracking-tight">
         {title}
       </h2>
-      <div className="space-y-4 sm:space-y-6">{children}</div>
+      <div className="mt-5 space-y-4">{children}</div>
     </section>
   );
 }
@@ -100,59 +98,86 @@ function HelpItem({
   options?: readonly string[] | readonly { label: string; value?: string }[];
 }) {
   return (
-    <div className="rounded-lg border border-border/60 bg-card/50 p-4 sm:p-4">
-      <h3 className="text-sm font-semibold text-foreground mb-1">{label}</h3>
-      <p className="text-sm text-muted-foreground mb-2 leading-relaxed">{description}</p>
-      {example && (
-        <p className="text-xs text-muted-foreground/80 mb-1 break-words">
-          <span className="font-medium">Example:</span> {example}
-        </p>
-      )}
-      {defaultVal && (
-        <p className="text-xs text-muted-foreground/80 mb-1 break-words">
-          <span className="font-medium">Default:</span> {defaultVal}
-        </p>
-      )}
-      {options && options.length > 0 && (
-        <p className="text-xs text-muted-foreground/80 mt-2 break-words">
-          <span className="font-medium">Options:</span>{" "}
-          <span className="inline">{options.map((o) => (typeof o === "string" ? o : o.label)).join(" · ")}</span>
-        </p>
-      )}
+    <div className="card-surface p-5">
+      <h3 className="text-sm font-semibold">{label}</h3>
+      <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{description}</p>
+      <dl className="mt-3 space-y-1.5 text-xs text-muted-foreground">
+        {example && (
+          <div className="flex gap-2 break-words">
+            <dt className="shrink-0 font-medium text-foreground/80">Example</dt>
+            <dd>{example}</dd>
+          </div>
+        )}
+        {defaultVal && (
+          <div className="flex gap-2 break-words">
+            <dt className="shrink-0 font-medium text-foreground/80">Default</dt>
+            <dd>{defaultVal}</dd>
+          </div>
+        )}
+        {options && options.length > 0 && (
+          <div className="flex gap-2 break-words">
+            <dt className="shrink-0 font-medium text-foreground/80">Options</dt>
+            <dd>
+              {options
+                .map((option) => (typeof option === "string" ? option : option.label))
+                .join(" · ")}
+            </dd>
+          </div>
+        )}
+      </dl>
     </div>
   );
 }
 
+const NAV = [
+  { href: "#step-1", label: "1 — Project" },
+  { href: "#step-2", label: "2 — Keywords" },
+  { href: "#step-3", label: "3 — Content" },
+  { href: "#step-4", label: "4 — Technical" },
+  { href: "#delivery", label: "Payment & delivery" },
+];
+
 export default function HelpPage() {
   return (
-    <div className="min-h-full">
+    <div className="shell py-14 sm:py-20">
       <JsonLd data={breadcrumbJsonLd} />
-      <header className="border-b border-border/50 px-4 py-3 sm:px-6">
-        <div className="mx-auto flex max-w-3xl items-center justify-between gap-4">
-          <Link
-            href="/generate"
-            className="inline-flex min-h-10 min-w-10 cursor-pointer items-center justify-center gap-2 rounded-lg px-2 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden />
-            <span>Back to form</span>
-          </Link>
-        </div>
+      <ScrollToHash />
+
+      <header className="mx-auto max-w-2xl text-center">
+        <span className="pill">Help</span>
+        <h1 className="mt-5 text-3xl font-semibold tracking-tight sm:text-4xl">
+          Every field, explained
+        </h1>
+        <p className="mt-4 text-muted-foreground">
+          What each wizard field controls, what a good answer looks like, and
+          what happens after you pay.
+        </p>
       </header>
 
-      <ScrollToHash />
-      <article className="mx-auto max-w-3xl px-4 py-6 sm:px-6 sm:py-10">
-        <div className="mb-8 flex flex-wrap items-center gap-3 sm:mb-10">
-          <HelpCircle className="h-7 w-7 shrink-0 text-muted-foreground sm:h-8 sm:w-8" aria-hidden />
-          <div className="min-w-0">
-            <h1 className="text-xl font-bold tracking-tight sm:text-2xl">Help</h1>
-            <p className="mt-0.5 text-sm text-muted-foreground">
-              What each form field means, with examples and defaults
-            </p>
-          </div>
-        </div>
+      <div className="mx-auto mt-14 grid max-w-5xl gap-10 lg:grid-cols-[minmax(0,14rem)_minmax(0,1fr)]">
+        <aside className="lg:sticky lg:top-24 lg:self-start">
+          <nav aria-label="Help sections" className="card-surface p-4">
+            <h2 className="field-label">Jump to</h2>
+            <ul className="mt-3 space-y-1">
+              {NAV.map((item) => (
+                <li key={item.href}>
+                  <a
+                    href={item.href}
+                    className="block rounded-md px-2 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-surface-muted hover:text-foreground"
+                  >
+                    {item.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+            <Link href="/generate" className="btn btn-brand mt-4 w-full">
+              Open the generator
+            </Link>
+          </nav>
+        </aside>
 
-        <div className="space-y-10 sm:space-y-12">
-          <HelpSection id="step-1" title="Step 1 — Project Identity">
+        <article className="min-w-0 space-y-14">
+          <HelpSection id="step-1" title="Step 1 — Project">
             <HelpItem
               label="Brand name"
               description="The name of your company, product, or brand. It will be used consistently in the generated SEO prompt and meta tags."
@@ -191,7 +216,7 @@ export default function HelpPage() {
             />
           </HelpSection>
 
-          <HelpSection id="step-2" title="Step 2 — SEO Keywords">
+          <HelpSection id="step-2" title="Step 2 — Keywords">
             <HelpItem
               label="Primary keyword"
               description="The main search phrase you want this page to rank for. One primary keyword per page is recommended to avoid cannibalization."
@@ -218,7 +243,7 @@ export default function HelpPage() {
             />
           </HelpSection>
 
-          <HelpSection id="step-3" title="Step 3 — Content Strategy">
+          <HelpSection id="step-3" title="Step 3 — Content">
             <HelpItem
               label="Competitor domains"
               description="Sites you consider competitors. The prompt can reference analyzing and outperforming them (e.g. for content ideas)."
@@ -250,7 +275,7 @@ export default function HelpPage() {
             />
           </HelpSection>
 
-          <HelpSection id="step-4" title="Step 4 — Output Options">
+          <HelpSection id="step-4" title="Step 4 — Technical">
             <HelpItem
               label="Title format"
               description="How the page title (and similar titles) should be structured: brand first, keyword first, or combined."
@@ -305,18 +330,52 @@ export default function HelpPage() {
               example="block /api/ and /admin/, allow all public pages"
             />
           </HelpSection>
-        </div>
 
-        <footer className="mt-10 pt-6 border-t border-border/50 sm:mt-12 sm:pt-8">
-          <Link
-            href="/generate"
-            className="inline-flex min-h-10 min-w-10 cursor-pointer items-center justify-center gap-2 rounded-lg px-2 py-2 text-sm font-medium text-foreground underline-offset-4 hover:bg-muted hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden />
-            Back to form
-          </Link>
-        </footer>
-      </article>
+          <HelpSection id="delivery" title="Payment & delivery">
+            <HelpItem
+              label="What it costs"
+              description={`${formatPrice()} once, per prompt. There is no account, no subscription, and nothing recurring to cancel.`}
+            />
+            <HelpItem
+              label="How you receive it"
+              description="The prompt appears on the receipt page the moment payment is confirmed, and an email arrives with a PDF and a Markdown copy attached."
+            />
+            <HelpItem
+              label="Re-downloading later"
+              description="Your receipt links to a permanent delivery page. Open it any time to copy the prompt, download it again in any format, or resend the email."
+            />
+            <HelpItem
+              label="If the email never arrives"
+              description="Check spam first, then use the resend button on your delivery page. If you were charged and cannot find the order at all, email support with your payment ID."
+              example="support@seopromptai.com"
+            />
+            <HelpItem
+              label="If a payment fails"
+              description="Nothing is charged and your draft stays in this browser, so you can retry checkout without re-entering anything."
+            />
+          </HelpSection>
+
+          <div className="card-surface flex flex-wrap items-center justify-between gap-4 p-6">
+            <div>
+              <h2 className="text-lg font-semibold tracking-tight">Still stuck?</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Email{" "}
+                <a
+                  href="mailto:support@seopromptai.com"
+                  className="text-brand underline-offset-4 hover:underline"
+                >
+                  support@seopromptai.com
+                </a>{" "}
+                and we will get back to you.
+              </p>
+            </div>
+            <Link href="/generate" className="btn btn-outline">
+              Back to the form
+              <ArrowRight className="h-4 w-4" aria-hidden />
+            </Link>
+          </div>
+        </article>
+      </div>
     </div>
   );
 }

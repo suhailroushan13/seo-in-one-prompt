@@ -1,11 +1,14 @@
 import { renderToBuffer } from "@react-pdf/renderer";
 import { createSeoPromptDocument } from "./reportTemplate";
+import { promptFilename } from "./delivery";
+import { SITE_NAME, SITE_URL } from "./product";
 
-interface ReportInput {
+export interface ReportInput {
   prompt: string;
   fullName: string;
   email: string;
   brandName: string;
+  orderId?: string;
 }
 
 export async function generateSeoPromptReport(
@@ -25,17 +28,15 @@ export async function generateSeoPromptReport(
     email: input.email,
     brandName: input.brandName,
     generatedDate,
+    orderId: input.orderId,
+    siteUrl: SITE_URL,
+    siteName: SITE_NAME,
   });
 
   const buffer = await renderToBuffer(doc as React.JSX.Element);
 
-  const safeBrand = (input.brandName || "")
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, "-")
-    .replace(/[^a-z0-9-_]/g, "");
-  const filename =
-    safeBrand.length > 0 ? `${safeBrand}-seo-prompt.pdf` : "seo-prompt.pdf";
-
-  return { buffer: Buffer.from(buffer), filename };
+  return {
+    buffer: Buffer.from(buffer),
+    filename: promptFilename(input.brandName, "pdf"),
+  };
 }

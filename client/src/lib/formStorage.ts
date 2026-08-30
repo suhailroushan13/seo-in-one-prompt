@@ -3,9 +3,8 @@ import { getDefaultFormState } from "./types";
 
 const FORM_DRAFT_KEY = "seo-prompt-form-draft";
 const USER_STORAGE_KEY = "seo-prompt-user";
-const PENDING_PROMPT_KEY = "seo-prompt-pending";
-const VIEW_PROMPT_KEY = "seo-prompt-view";
 const GENERATED_PROMPT_KEY = "seo-prompt-generated";
+const LAST_ORDER_KEY = "seo-prompt-last-order";
 
 export interface StoredUser {
   fullName: string;
@@ -14,106 +13,47 @@ export interface StoredUser {
 
 const defaultUser: StoredUser = { fullName: "", email: "" };
 
-export function loadUserFromStorage(): StoredUser {
-  if (typeof window === "undefined") return defaultUser;
+function readJson<T>(storage: Storage, key: string): Partial<T> | null {
   try {
-    const raw = localStorage.getItem(USER_STORAGE_KEY);
-    if (!raw) return defaultUser;
-    const parsed = JSON.parse(raw) as Partial<StoredUser>;
-    return { ...defaultUser, ...parsed };
-  } catch {
-    return defaultUser;
-  }
-}
-
-export function saveUserToStorage(user: StoredUser): void {
-  if (typeof window === "undefined") return;
-  try {
-    localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
-  } catch {
-    // ignore
-  }
-}
-
-export function loadFormFromStorage(): FormState {
-  if (typeof window === "undefined") return getDefaultFormState();
-  try {
-    const raw = localStorage.getItem(FORM_DRAFT_KEY);
-    if (!raw) return getDefaultFormState();
-    const parsed = JSON.parse(raw) as Partial<FormState>;
-    return { ...getDefaultFormState(), ...parsed };
-  } catch {
-    return getDefaultFormState();
-  }
-}
-
-export function saveFormToStorage(form: FormState): void {
-  if (typeof window === "undefined") return;
-  try {
-    localStorage.setItem(FORM_DRAFT_KEY, JSON.stringify(form));
-  } catch {
-    // ignore
-  }
-}
-
-/** Pending prompt + name + email + brand saved when user clicks Submit (before payment). Used on success page to send email. */
-export interface PendingPromptData {
-  prompt: string;
-  fullName: string;
-  email: string;
-  brandName: string;
-}
-
-export function savePendingPrompt(data: PendingPromptData): void {
-  if (typeof window === "undefined") return;
-  try {
-    localStorage.setItem(PENDING_PROMPT_KEY, JSON.stringify(data));
-  } catch {
-    // ignore
-  }
-}
-
-export function loadPendingPrompt(): PendingPromptData | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = localStorage.getItem(PENDING_PROMPT_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as Partial<PendingPromptData>;
-    if (!parsed.prompt || !parsed.email) return null;
-    return {
-      prompt: String(parsed.prompt),
-      fullName: String(parsed.fullName ?? ""),
-      email: String(parsed.email).trim().toLowerCase(),
-      brandName: String(parsed.brandName ?? ""),
-    };
+    const raw = storage.getItem(key);
+    return raw ? (JSON.parse(raw) as Partial<T>) : null;
   } catch {
     return null;
   }
 }
 
-export function clearPendingPrompt(): void {
-  if (typeof window === "undefined") return;
+function writeJson(storage: Storage, key: string, value: unknown): void {
   try {
-    localStorage.removeItem(PENDING_PROMPT_KEY);
+    storage.setItem(key, JSON.stringify(value));
   } catch {
-    // ignore
+    // Quota or private-mode failures are non-fatal: the app works without a draft.
   }
 }
 
-/** Clears form draft, user, pending prompt, and generated prompt from localStorage. */
-export function clearFormAndUserStorage(): void {
-  if (typeof window === "undefined") return;
-  try {
-    localStorage.removeItem(FORM_DRAFT_KEY);
-    localStorage.removeItem(USER_STORAGE_KEY);
-    localStorage.removeItem(PENDING_PROMPT_KEY);
-    localStorage.removeItem(GENERATED_PROMPT_KEY);
-  } catch {
-    // ignore
-  }
+export function loadUserFromStorage(): StoredUser {
+  if (typeof window === "undefined") return defaultUser;
+  return { ...defaultUser, ...(readJson<StoredUser>(localStorage, USER_STORAGE_KEY) ?? {}) };
 }
 
-/** Last generated prompt on /generate — persisted so it survives refresh and is available for /view. */
+export function saveUserToStorage(user: StoredUser): void {
+  if (typeof window === "undefined") return;
+  writeJson(localStorage, USER_STORAGE_KEY, user);
+}
+
+export function loadFormFromStorage(): FormState {
+  if (typeof window === "undefined") return getDefaultFormState();
+  return {
+    ...getDefaultFormState(),
+    ...(readJson<FormState>(localStorage, FORM_DRAFT_KEY) ?? {}),
+  };
+}
+
+export function saveFormToStorage(form: FormState): void {
+  if (typeof window === "undefined") return;
+  writeJson(localStorage, FORM_DRAFT_KEY, form);
+}
+
+/** Last generated prompt, so a refresh on /generate does not lose the result. */
 export function saveGeneratedPrompt(prompt: string): void {
   if (typeof window === "undefined") return;
   try {
@@ -132,29 +72,50 @@ export function loadGeneratedPrompt(): string | null {
   }
 }
 
-/** SessionStorage: prompt saved for the /view page (e.g. after payment success). */
-export function saveViewPrompt(prompt: string): void {
+/**
+ * The order the buyer was last sent to checkout with. Used to recover the
+ * receipt when the payment provider drops our redirect query parameters.
+ */
+export interface LastOrder {
+  orderId: string;
+  email: string;
+  brandName: string;
+  createdAt: string;
+}
+
+export function saveLastOrder(order: LastOrder): void {
+  if (typeof window === "undefined") return;
+  writeJson(localStorage, LAST_ORDER_KEY, order);
+}
+
+export function loadLastOrder(): LastOrder | null {
+  if (typeof window === "undefined") return null;
+  const parsed = readJson<LastOrder>(localStorage, LAST_ORDER_KEY);
+  if (!parsed?.orderId || !parsed.email) return null;
+  return {
+    orderId: String(parsed.orderId),
+    email: String(parsed.email),
+    brandName: String(parsed.brandName ?? ""),
+    createdAt: String(parsed.createdAt ?? ""),
+  };
+}
+
+export function clearLastOrder(): void {
   if (typeof window === "undefined") return;
   try {
-    sessionStorage.setItem(VIEW_PROMPT_KEY, prompt);
+    localStorage.removeItem(LAST_ORDER_KEY);
   } catch {
     // ignore
   }
 }
 
-export function loadViewPrompt(): string | null {
-  if (typeof window === "undefined") return null;
-  try {
-    return sessionStorage.getItem(VIEW_PROMPT_KEY);
-  } catch {
-    return null;
-  }
-}
-
-export function clearViewPrompt(): void {
+/** Clears the draft, the saved contact details, and the last generated prompt. */
+export function clearFormAndUserStorage(): void {
   if (typeof window === "undefined") return;
   try {
-    sessionStorage.removeItem(VIEW_PROMPT_KEY);
+    localStorage.removeItem(FORM_DRAFT_KEY);
+    localStorage.removeItem(USER_STORAGE_KEY);
+    localStorage.removeItem(GENERATED_PROMPT_KEY);
   } catch {
     // ignore
   }

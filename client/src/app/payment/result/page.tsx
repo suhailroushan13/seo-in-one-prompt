@@ -1,237 +1,325 @@
 "use client";
 
-import { Suspense, useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { AlertCircle, ArrowRight, Check, Download } from "lucide-react";
-import { loadPendingPrompt, clearFormAndUserStorage, saveViewPrompt, loadViewPrompt } from "@/lib/formStorage";
-import { downloadStorageAsTxt } from "@/lib/storageExport";
+import {
+  AlertTriangle,
+  ArrowRight,
+  CheckCircle2,
+  Loader2,
+  Mail,
+  RefreshCcw,
+} from "lucide-react";
+import { PromptViewer } from "@/components/common/PromptViewer";
+import type { DeliveryPayload } from "@/lib/deliveryPayload";
+import { clearLastOrder, loadLastOrder } from "@/lib/formStorage";
+import { CHECKOUT_URL } from "@/lib/product";
 
-const FAILURE_MESSAGES: Record<string, string> = {
-  cancelled: "You cancelled the payment.",
-  payment_failed: "The payment could not be completed.",
-  declined: "Your payment was declined.",
-  expired: "The payment session expired.",
-};
+type Phase = "working" | "paid" | "pending" | "failed" | "unmatched";
 
-function formatPaymentTime(date: Date) {
-  return date.toLocaleString("en-US", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  });
-}
+/** How long to wait for the webhook when the provider gave us no status. */
+const POLL_ATTEMPTS = 6;
+const POLL_INTERVAL_MS = 2500;
 
-function formatAmount(amount: number, currency = "USD") {
-  return new Intl.NumberFormat(undefined, {
-    style: "currency",
-    currency,
-  }).format(amount);
-}
+function PaymentResult() {
+  const params = useSearchParams();
+  const [phase, setPhase] = useState<Phase>("working");
+  const [order, setOrder] = useState<DeliveryPayload | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+  const [emailSent, setEmailSent] = useState<boolean | null>(null);
+  const started = useRef(false);
 
-function PaymentResultContent() {
-  const searchParams = useSearchParams();
-  const status = searchParams.get("status") ?? "failure";
-  const isSuccess = /^(success|succeeded|paid|completed)$/i.test(status);
-  const completeCalledRef = useRef(false);
-  const autoDownloadDoneRef = useRef(false);
-  const [paymentTime, setPaymentTime] = useState<Date | null>(null);
-  const [storedName, setStoredName] = useState<string | null>(null);
-  const [viewPromptAvailable, setViewPromptAvailable] = useState(false);
-  const [, setEmailSent] = useState<boolean | null>(null);
-  const [, setEmailSentReason] = useState<string | null>(null);
+  const finish = useCallback((payload: DeliveryPayload) => {
+    setOrder(payload);
+    setPhase(payload.status === "paid" ? "paid" : "pending");
+    if (payload.status === "paid") clearLastOrder();
+  }, []);
 
-  // If we already have prompt in sessionStorage (e.g. after refresh), show Download button
   useEffect(() => {
-    if (!isSuccess) return;
-    if (loadViewPrompt()?.trim()) setViewPromptAvailable(true);
-  }, [isSuccess]);
+    if (started.current) return;
+    started.current = true;
 
-  // Auto-download storage as .txt once on success when we have prompt (after saveViewPrompt or from session)
-  useEffect(() => {
-    if (!isSuccess || !viewPromptAvailable || autoDownloadDoneRef.current) return;
-    autoDownloadDoneRef.current = true;
-    downloadStorageAsTxt();
-  }, [isSuccess, viewPromptAvailable]);
+    const providerStatus = params.get("status");
+    const paymentId = params.get("payment_id");
+    const reason = params.get("reason");
+    const last = loadLastOrder();
+    const orderId = params.get("order") ?? last?.orderId ?? null;
+    const email = params.get("email") ?? last?.email ?? null;
 
-  // Record payment + send email: use prompt/name from localStorage (saved when user clicked Submit), or fallback to server pending
-  useEffect(() => {
-    if (!isSuccess || completeCalledRef.current) return;
-    const pendingFromStorage = loadPendingPrompt();
-    const emailFromUrl = searchParams.get("email")?.trim();
-    // Fall back to localStorage email if the payment provider didn't echo it back in the URL
-    const emailToUse = emailFromUrl || pendingFromStorage?.email;
-    if (!emailToUse) return;
-    completeCalledRef.current = true;
-    setPaymentTime(new Date());
-    const key = emailToUse.toLowerCase();
-    // Use the localStorage prompt whenever it exists — it's always from the same browser session
-    const hasStoragePrompt = !!(pendingFromStorage?.prompt?.trim());
-    if (hasStoragePrompt) {
-      saveViewPrompt(pendingFromStorage!.prompt.trim());
-      setViewPromptAvailable(true);
-    }
-    const body = {
-      email: key,
-      status,
-      name: searchParams.get("name")?.trim() || pendingFromStorage?.fullName || undefined,
-      payment_id: searchParams.get("payment_id")?.trim() || undefined,
-      amount: searchParams.get("amount") ? Number(searchParams.get("amount")) : undefined,
-      currency: searchParams.get("currency")?.trim() || "USD",
-      ...(hasStoragePrompt
-        ? {
-            prompt: pendingFromStorage!.prompt.trim(),
-            fullName: pendingFromStorage!.fullName,
-            brandName: pendingFromStorage!.brandName ?? "",
-          }
-        : {}),
+    let cancelled = false;
+
+    const readOrder = async (id: string): Promise<DeliveryPayload | null> => {
+      const response = await fetch(`/api/order/${id}`, { cache: "no-store" });
+      if (!response.ok) return null;
+      const data = await response.json().catch(() => null);
+      return (data?.order as DeliveryPayload) ?? null;
     };
-    console.log("[payment/result] Calling complete API with:", {
-      email: key,
-      hasPrompt: hasStoragePrompt,
-      promptLength: hasStoragePrompt ? pendingFromStorage!.prompt.length : 0,
-    });
-    fetch("/api/payment/complete", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        console.log("[payment/result] Complete API response:", data);
-        if (data?.name) setStoredName(data.name);
-        if (typeof data?.sent === "boolean") setEmailSent(data.sent);
-        if (data?.reason) setEmailSentReason(data.reason);
-        if (data?.sent === true) clearFormAndUserStorage();
-      })
-      .catch((err) => {
-        console.error("[payment/result] Complete API error:", err);
-        setEmailSent(false);
+
+    const complete = async () => {
+      const response = await fetch("/api/payment/complete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          orderId: orderId ?? undefined,
+          email: email ?? undefined,
+          payment_id: paymentId ?? undefined,
+          status: "success",
+          brandName: last?.brandName || undefined,
+        }),
       });
-  }, [isSuccess, searchParams, status]);
+      const data = await response.json().catch(() => ({}));
+      if (cancelled) return;
 
-  if (isSuccess) {
-    const email = searchParams.get("email") ?? "";
-    const nameFromUrl = searchParams.get("name") ?? "";
-    const name = nameFromUrl || (storedName ?? "");
-    const amountParam = searchParams.get("amount");
-    const amount = amountParam ? Number(amountParam) : undefined;
-    const currency = searchParams.get("currency")?.trim() || "USD";
-    const displayTime = paymentTime ?? new Date();
+      if (data?.ok && data.order) {
+        setEmailSent(Boolean(data.emailSent));
+        if (data.emailError) {
+          setMessage(
+            "Payment confirmed, but the delivery email failed to send. Your prompt is below — use Resend or download it now."
+          );
+        }
+        finish(data.order as DeliveryPayload);
+        return;
+      }
 
+      setPhase("unmatched");
+      setMessage(
+        typeof data?.error === "string"
+          ? data.error
+          : "We could not match this payment to an order."
+      );
+    };
+
+    const run = async () => {
+      if (providerStatus === "failure") {
+        setPhase("failed");
+        setMessage(reason ?? null);
+        if (orderId) {
+          await fetch("/api/payment/complete", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ orderId, status: "failed", reason }),
+          }).catch(() => undefined);
+        }
+        return;
+      }
+
+      if (orderId) {
+        const existing = await readOrder(orderId);
+        if (cancelled) return;
+
+        if (existing?.status === "paid") {
+          finish(existing);
+          return;
+        }
+        if (providerStatus === "success" || paymentId) {
+          await complete();
+          return;
+        }
+
+        // No outcome reported — wait for the provider's webhook.
+        for (let attempt = 0; attempt < POLL_ATTEMPTS; attempt += 1) {
+          await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
+          if (cancelled) return;
+          const polled = await readOrder(orderId);
+          if (polled?.status === "paid") {
+            finish(polled);
+            return;
+          }
+          if (polled?.status === "failed") {
+            setPhase("failed");
+            return;
+          }
+        }
+        setOrder(existing);
+        setPhase("pending");
+        return;
+      }
+
+      if (paymentId || email) {
+        await complete();
+        return;
+      }
+
+      setPhase("unmatched");
+      setMessage("This link is missing its order reference.");
+    };
+
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [params, finish]);
+
+  if (phase === "working") {
     return (
-      <div className="mx-auto max-w-md px-4 py-24 text-center">
-        {/* Verified check animation */}
-        <div
-          className="mb-6 inline-flex h-20 w-20 items-center justify-center rounded-full bg-green-500/20 text-green-600 dark:text-green-400 animate-in zoom-in-50 duration-500"
-          role="img"
-          aria-label="Payment verified"
-        >
-          <span className="relative flex h-12 w-12 items-center justify-center">
-            <span className="absolute inset-0 rounded-full border-4 border-green-500/50 dark:border-green-400/50 animate-ping animation-duration-[1.5s]" />
-            <span className="relative flex h-10 w-10 items-center justify-center rounded-full bg-green-500 dark:bg-green-400 text-background">
-              <Check className="h-6 w-6 stroke-3" aria-hidden />
-            </span>
-          </span>
-        </div>
-
-        <h1 className="text-3xl font-bold tracking-tight">Payment received</h1>
-        <p className="mt-2 text-lg font-medium text-green-600 dark:text-green-400">
-          Success
-        </p>
-        <p className="mt-4 text-muted-foreground">
-          The prompt PDF has been sent to your email.
-        </p>
-
-        {/* Payment details: name, email, time, amount */}
-        <div className="mt-6 rounded-xl border border-border bg-muted/30 px-4 py-4 text-left">
-          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-            Payment details
-          </p>
-          <dl className="mt-3 space-y-2 text-sm">
-            {name && (
-              <div>
-                <dt className="text-muted-foreground">Name</dt>
-                <dd className="font-medium text-foreground">{name}</dd>
-              </div>
-            )}
-            {email && (
-              <div>
-                <dt className="text-muted-foreground">Email</dt>
-                <dd className="font-medium text-foreground">{email}</dd>
-              </div>
-            )}
-            <div>
-              <dt className="text-muted-foreground">Payment time</dt>
-              <dd className="font-medium text-foreground">
-                {formatPaymentTime(displayTime)}
-              </dd>
-            </div>
-            {amount != null && Number.isFinite(amount) && (
-              <div>
-                <dt className="text-muted-foreground">Amount</dt>
-                <dd className="font-medium text-foreground">
-                  {formatAmount(amount, currency)}
-                </dd>
-              </div>
-            )}
-          </dl>
-        </div>
-
-        <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-          {viewPromptAvailable && (
-            <Link
-              href="/prompt/view"
-              className="inline-flex h-11 min-w-[44px] items-center justify-center gap-2 rounded-xl bg-foreground px-5 py-3 text-sm font-medium text-background transition-opacity hover:opacity-90"
-            >
-              View Prompt
-              <ArrowRight className="h-4 w-4 shrink-0" aria-hidden />
-            </Link>
-          )}
-          {viewPromptAvailable && (
-            <button
-              type="button"
-              onClick={() => downloadStorageAsTxt()}
-              className="inline-flex h-11 min-w-[44px] items-center justify-center gap-2 rounded-xl border border-border bg-transparent px-5 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted"
-            >
-              Download Prompt (TXT)
-              <Download className="h-4 w-4 shrink-0" aria-hidden />
-            </button>
-          )}
-          <Link
-            href="/"
-            className="inline-flex h-11 min-w-[44px] items-center justify-center gap-2 rounded-xl border border-border bg-transparent px-5 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted"
-          >
-            Back to Generator
-            <ArrowRight className="h-4 w-4 shrink-0" aria-hidden />
-          </Link>
-        </div>
-      </div>
+      <StatusShell
+        tone="neutral"
+        icon={<Loader2 className="h-6 w-6 animate-spin" aria-hidden />}
+        title="Confirming your payment"
+        body="This takes a few seconds. Keep this tab open."
+      />
     );
   }
 
-  const reason = searchParams.get("reason") ?? searchParams.get("error") ?? "payment_failed";
-  const message = FAILURE_MESSAGES[reason] ?? "Something went wrong. Please try again.";
+  if (phase === "failed") {
+    return (
+      <StatusShell
+        tone="danger"
+        icon={<AlertTriangle className="h-6 w-6" aria-hidden />}
+        title="Payment was not completed"
+        body={
+          message
+            ? `Your card was not charged. ${message}`
+            : "Your card was not charged. Your prompt is still saved in this browser, so you can try again without re-entering anything."
+        }
+      >
+        <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row">
+          <a href={CHECKOUT_URL} className="btn btn-brand">
+            Try payment again
+          </a>
+          <Link href="/generate" className="btn btn-outline">
+            Back to my prompt
+          </Link>
+        </div>
+      </StatusShell>
+    );
+  }
+
+  if (phase === "unmatched") {
+    return (
+      <StatusShell
+        tone="danger"
+        icon={<AlertTriangle className="h-6 w-6" aria-hidden />}
+        title="We could not find your order"
+        body={
+          message ??
+          "If you were charged, email us your payment ID and we will deliver your prompt straight away."
+        }
+      >
+        <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row">
+          <a href="mailto:support@seopromptai.com" className="btn btn-brand">
+            <Mail className="h-4 w-4" aria-hidden />
+            Contact support
+          </a>
+          <Link href="/generate" className="btn btn-outline">
+            Back to the generator
+          </Link>
+        </div>
+      </StatusShell>
+    );
+  }
+
+  if (phase === "pending") {
+    return (
+      <StatusShell
+        tone="neutral"
+        icon={<Loader2 className="h-6 w-6 animate-spin" aria-hidden />}
+        title="Payment is still processing"
+        body="Your bank has not confirmed the charge yet. As soon as it does we email your prompt — you can safely close this tab."
+      >
+        {order && (
+          <p className="field-hint mt-6">
+            Order reference <span className="tabular">{order.orderId}</span>
+          </p>
+        )}
+        <div className="mt-6 flex justify-center">
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="btn btn-outline"
+          >
+            <RefreshCcw className="h-4 w-4" aria-hidden />
+            Check again
+          </button>
+        </div>
+      </StatusShell>
+    );
+  }
+
+  if (!order?.prompt) return null;
 
   return (
-    <div className="mx-auto max-w-md px-4 py-24 text-center">
-      <div className="mb-6 inline-flex h-14 w-14 items-center justify-center rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400">
-        <AlertCircle className="h-7 w-7" aria-hidden />
+    <div className="shell py-12 sm:py-16">
+      <div className="mx-auto max-w-2xl text-center">
+        <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-muted text-brand mx-auto">
+          <CheckCircle2 className="h-7 w-7" aria-hidden />
+        </span>
+        <h1 className="mt-6 text-3xl font-semibold tracking-tight sm:text-4xl">
+          Payment confirmed
+        </h1>
+        <p className="mt-3 text-muted-foreground">
+          {emailSent === false
+            ? "Your prompt is ready below."
+            : `Your prompt is ready below and on its way to ${order.email}.`}
+        </p>
+        {message && (
+          <p className="field-error mx-auto mt-4 max-w-lg" role="alert">
+            {message}
+          </p>
+        )}
+        <p className="field-hint mt-4">
+          Keep this link — it reopens your prompt any time:{" "}
+          <Link
+            href={`/delivery/${order.orderId}`}
+            className="text-brand underline-offset-4 hover:underline"
+          >
+            /delivery/{order.orderId}
+          </Link>
+        </p>
       </div>
-      <h1 className="text-3xl font-bold tracking-tight">Payment unsuccessful</h1>
-      <p className="mt-4 text-muted-foreground">{message}</p>
-      <Link
-        href="/generate"
-        className="mt-8 inline-flex items-center gap-2 rounded-xl bg-foreground px-5 py-3 text-sm font-medium text-background transition-opacity hover:opacity-90"
-      >
-        Try again
-        <ArrowRight className="h-4 w-4" aria-hidden />
-      </Link>
-      <Link
-        href="/"
-        className="mt-4 block text-sm text-muted-foreground transition-colors hover:text-foreground"
-      >
-        Back to home
-      </Link>
+
+      <div className="mt-12">
+        <PromptViewer
+          prompt={order.prompt}
+          brandName={order.brandName ?? undefined}
+          fullName={order.name ?? undefined}
+          email={order.email}
+          orderId={order.orderId}
+          generatedAt={order.paidAt ?? undefined}
+          filenames={order.filenames}
+        />
+      </div>
+
+      <div className="mt-12 text-center">
+        <Link href="/generate" className="btn btn-outline">
+          Generate another prompt
+          <ArrowRight className="h-4 w-4" aria-hidden />
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+function StatusShell({
+  tone,
+  icon,
+  title,
+  body,
+  children,
+}: {
+  tone: "neutral" | "danger";
+  icon: React.ReactNode;
+  title: string;
+  body: string;
+  children?: React.ReactNode;
+}) {
+  return (
+    <div className="shell py-20">
+      <div className="card-surface mx-auto max-w-lg p-8 text-center sm:p-10">
+        <span
+          className={`mx-auto flex h-14 w-14 items-center justify-center rounded-2xl ${
+            tone === "danger"
+              ? "bg-destructive/10 text-destructive"
+              : "bg-brand-muted text-brand"
+          }`}
+        >
+          {icon}
+        </span>
+        <h1 className="mt-6 text-2xl font-semibold tracking-tight">{title}</h1>
+        <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{body}</p>
+        {children}
+      </div>
     </div>
   );
 }
@@ -240,12 +328,15 @@ export default function PaymentResultPage() {
   return (
     <Suspense
       fallback={
-        <div className="mx-auto max-w-md px-4 py-24 text-center text-muted-foreground">
-          Loading…
-        </div>
+        <StatusShell
+          tone="neutral"
+          icon={<Loader2 className="h-6 w-6 animate-spin" aria-hidden />}
+          title="Loading your receipt"
+          body="One moment."
+        />
       }
     >
-      <PaymentResultContent />
+      <PaymentResult />
     </Suspense>
   );
 }

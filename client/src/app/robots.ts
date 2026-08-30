@@ -1,7 +1,5 @@
 import type { MetadataRoute } from "next";
-
-const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL || "https://seoprompt.ai";
+import { SITE_URL } from "@/lib/product";
 
 export default function robots(): MetadataRoute.Robots {
   return {
@@ -9,7 +7,9 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "*",
         allow: "/",
-        disallow: ["/api/", "/payment/", "/success", "/failure", "/login"],
+        // Order-scoped and provider-callback routes carry personal data and
+        // must never be indexed.
+        disallow: ["/api/", "/payment/", "/delivery/", "/success", "/failure"],
       },
     ],
     sitemap: `${SITE_URL}/sitemap.xml`,
