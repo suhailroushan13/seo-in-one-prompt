@@ -383,6 +383,62 @@
         background-size: 56px 56px;
         mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 40%, transparent 100%);
     }
+
+    /* Gradient type — hero headline accent and the footer wordmark */
+    .text-gradient {
+        background-image: linear-gradient(
+            100deg,
+            var(--brand) 0%,
+            oklch(0.66 0.15 196) 42%,
+            oklch(0.62 0.17 268) 78%,
+            var(--brand) 100%
+        );
+        background-size: 200% 100%;
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+    }
+
+    .wordmark {
+        @apply select-none font-semibold leading-[0.82] tracking-[-0.05em];
+        font-size: clamp(3rem, 17vw, 15rem);
+        background-image: linear-gradient(
+            170deg,
+            color-mix(in oklab, var(--brand) 78%, transparent) 0%,
+            color-mix(in oklab, oklch(0.62 0.17 268) 55%, transparent) 40%,
+            transparent 92%
+        );
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+    }
+
+    /* Soft brand glow behind the hero */
+    .hero-glow::before {
+        content: "";
+        position: absolute;
+        inset-inline: 0;
+        top: -30%;
+        height: 70%;
+        pointer-events: none;
+        background: radial-gradient(
+                ellipse 55% 60% at 30% 45%,
+                color-mix(in oklab, var(--brand) 26%, transparent),
+                transparent 70%
+            ),
+            radial-gradient(
+                ellipse 45% 55% at 72% 30%,
+                color-mix(in oklab, oklch(0.62 0.17 268) 20%, transparent),
+                transparent 70%
+            );
+        filter: blur(48px);
+    }
+
+    /* Locked preview — shows structure, never the content */
+    .redacted {
+        @apply rounded-full;
+        background: color-mix(in oklab, var(--foreground) 13%, transparent);
+    }
 }
 
 @media (prefers-reduced-motion: reduce) {

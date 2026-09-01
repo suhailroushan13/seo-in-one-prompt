@@ -1,14 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
-import { ArrowLeft, ArrowRight, HelpCircle, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowRight, Lock, Sparkles } from "lucide-react";
 import { PageTypeCards } from "@/components/inputs/PageTypeCards";
 import { TagInput } from "@/components/inputs/TagInput";
 import { SegmentControl } from "@/components/inputs/SegmentControl";
 import { KeywordSuggestions } from "@/components/inputs/KeywordSuggestions";
 import { Field, describedById } from "@/components/wizard/Field";
 import { StepProgress } from "@/components/wizard/StepProgress";
+import { example } from "@/lib/exampleForm";
 import type { FormState } from "@/lib/types";
 import {
   ANALYTICS_OPTIONS,
@@ -31,6 +31,9 @@ interface StepWizardProps {
   form: FormState;
   update: <K extends keyof FormState>(key: K, value: FormState[K]) => void;
   onGenerate: () => void;
+  /** True while the form still holds the untouched example project. */
+  generateDisabled?: boolean;
+  disabledReason?: string;
 }
 
 const STEPS = [
@@ -75,7 +78,13 @@ function validateStep(step: number, form: FormState): FieldErrors {
   return errors;
 }
 
-export function StepWizard({ form, update, onGenerate }: StepWizardProps) {
+export function StepWizard({
+  form,
+  update,
+  onGenerate,
+  generateDisabled = false,
+  disabledReason,
+}: StepWizardProps) {
   const [currentStep, setCurrentStep] = useState(1);
   const [furthestStep, setFurthestStep] = useState(1);
   const [errors, setErrors] = useState<FieldErrors>({});
@@ -123,6 +132,7 @@ export function StepWizard({ form, update, onGenerate }: StepWizardProps) {
   };
 
   const handleGenerate = () => {
+    if (generateDisabled) return;
     for (const step of [1, 2]) {
       const found = validateStep(step, form);
       if (Object.keys(found).length) {
@@ -161,13 +171,9 @@ export function StepWizard({ form, update, onGenerate }: StepWizardProps) {
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">{active.subtitle}</p>
           </div>
-          <Link
-            href={`/help#step-${currentStep}`}
-            className="btn btn-ghost h-9 min-h-9 px-2.5 text-xs"
-          >
-            <HelpCircle className="h-3.5 w-3.5" aria-hidden />
-            Need help?
-          </Link>
+          <span className="pill">
+            {currentStep} / {STEPS.length}
+          </span>
         </header>
 
         <div className="mt-7 space-y-6">
@@ -196,12 +202,28 @@ export function StepWizard({ form, update, onGenerate }: StepWizardProps) {
               <ArrowRight className="h-4 w-4" aria-hidden />
             </button>
           )}
-          <button type="button" onClick={handleGenerate} className="btn btn-brand w-full sm:w-auto">
-            <Sparkles className="h-4 w-4" aria-hidden />
+          <button
+            type="button"
+            onClick={handleGenerate}
+            disabled={generateDisabled}
+            aria-describedby={generateDisabled && disabledReason ? "generate-disabled" : undefined}
+            className="btn btn-brand w-full sm:w-auto"
+          >
+            {generateDisabled ? (
+              <Lock className="h-4 w-4" aria-hidden />
+            ) : (
+              <Sparkles className="h-4 w-4" aria-hidden />
+            )}
             Generate prompt
           </button>
         </div>
       </div>
+
+      {generateDisabled && disabledReason && (
+        <p id="generate-disabled" className="field-hint mt-3 text-right">
+          {disabledReason}
+        </p>
+      )}
     </div>
   );
 }
@@ -259,8 +281,10 @@ function StepProject({
           <input
             id="field-brandName"
             type="text"
+            name="organization"
+            autoComplete="organization"
             className="field-control"
-            placeholder="e.g. Zomato"
+            placeholder={`e.g. ${example("brandName")}`}
             value={form.brandName}
             aria-invalid={Boolean(errors.brandName) || undefined}
             aria-describedby={describedById("field-brandName", Boolean(errors.brandName))}
@@ -289,7 +313,7 @@ function StepProject({
               inputMode="url"
               autoComplete="url"
               className="w-full bg-transparent px-3 text-sm outline-none placeholder:text-muted-foreground"
-              placeholder="zomato.com"
+              placeholder={example("domainName").replace(/^https?:\/\//i, "")}
               value={form.domainName.replace(/^https?:\/\//i, "")}
               aria-invalid={Boolean(errors.domainName) || undefined}
               aria-describedby={describedById("field-domainName", Boolean(errors.domainName))}
@@ -311,7 +335,7 @@ function StepProject({
           id="field-projectDesc"
           rows={3}
           className="field-control min-h-24 resize-y py-2.5"
-          placeholder="e.g. Food delivery and restaurant discovery platform"
+          placeholder={`e.g. ${example("projectDesc")}`}
           value={form.projectDesc}
           aria-describedby="field-projectDesc-hint"
           onChange={(event) => set("projectDesc", event.target.value)}
@@ -343,6 +367,7 @@ function StepProject({
             <input
               id="field-customStack"
               type="text"
+              autoComplete="off"
               className="field-control"
               placeholder="e.g. React Native, Node.js"
               value={form.customStack}
@@ -377,7 +402,7 @@ function StepKeywords({
           id="field-primaryKw"
           value={form.primaryKw}
           onChange={(value) => set("primaryKw", value)}
-          placeholder="e.g. order food online"
+          placeholder={`e.g. ${example("primaryKw")}`}
           invalid={Boolean(errors.primaryKw)}
           describedBy={describedById("field-primaryKw", Boolean(errors.primaryKw))}
         />
@@ -392,7 +417,7 @@ function StepKeywords({
           id="field-secondaryKw"
           value={form.secondaryKw}
           onChange={(value) => set("secondaryKw", value)}
-          placeholder="e.g. food delivery, best restaurants"
+          placeholder={`e.g. ${example("secondaryKw")}`}
         />
       </Field>
 
@@ -414,7 +439,8 @@ function StepKeywords({
           id="field-audience"
           type="text"
           className="field-control"
-          placeholder="e.g. foodies, restaurant owners, delivery partners"
+          autoComplete="off"
+          placeholder={`e.g. ${example("audience")}`}
           value={form.audience}
           aria-describedby="field-audience-hint"
           onChange={(event) => set("audience", event.target.value)}
@@ -436,7 +462,8 @@ function StepContent({ form, set }: { form: FormState; set: Setter }) {
           id="field-competitors"
           type="text"
           className="field-control"
-          placeholder="e.g. swiggy.com, ubereats.com"
+          autoComplete="off"
+          placeholder={`e.g. ${example("competitors")}`}
           value={form.competitors}
           aria-describedby="field-competitors-hint"
           onChange={(event) => set("competitors", event.target.value)}
@@ -480,7 +507,7 @@ function StepContent({ form, set }: { form: FormState; set: Setter }) {
           id="field-extraNotes"
           rows={3}
           className="field-control min-h-24 resize-y py-2.5"
-          placeholder="e.g. Focus on local SEO and restaurant listing pages"
+          placeholder={`e.g. ${example("extraNotes")}`}
           value={form.extraNotes}
           aria-describedby="field-extraNotes-hint"
           onChange={(event) => set("extraNotes", event.target.value)}
@@ -579,7 +606,8 @@ function StepTechnical({ form, set }: { form: FormState; set: Setter }) {
           id="field-robotsRules"
           type="text"
           className="field-control"
-          placeholder="e.g. block /api/ and /admin/"
+          autoComplete="off"
+          placeholder={`e.g. ${example("robotsRules")}`}
           value={form.robotsRules}
           aria-describedby="field-robotsRules-hint"
           onChange={(event) => set("robotsRules", event.target.value)}

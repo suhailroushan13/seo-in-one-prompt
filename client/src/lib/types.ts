@@ -53,13 +53,6 @@ export interface FormState {
   extraNotes: string;
 }
 
-export interface HistoryEntry {
-  id: string;
-  title: string;
-  prompt: string;
-  createdAt: string;
-}
-
 export const TECH_OPTIONS = [
   "Next.js (App Router) + TypeScript + Tailwind + MongoDB",
   "Next.js (Pages Router) + TypeScript",

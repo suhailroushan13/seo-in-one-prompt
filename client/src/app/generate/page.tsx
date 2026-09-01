@@ -1,22 +1,19 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import Link from "next/link";
-import { ArrowRight, Loader2, ShieldCheck, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Trash2 } from "lucide-react";
 import { StepWizard } from "@/components/wizard/StepWizard";
-import { PromptViewer } from "@/components/common/PromptViewer";
-import { addToHistory } from "@/components/HistorySidebar";
+import { ExampleCard } from "@/components/generate/ExampleCard";
+import { ContactDialog } from "@/components/generate/ContactDialog";
 import { buildPrompt } from "@/lib/promptBuilder";
-import { DELIVERABLES, formatPrice } from "@/lib/product";
+import { EXAMPLE_FORM, isExampleForm } from "@/lib/exampleForm";
 import type { FormState } from "@/lib/types";
 import { getDefaultFormState } from "@/lib/types";
 import {
   clearFormAndUserStorage,
   loadFormFromStorage,
-  loadGeneratedPrompt,
   loadUserFromStorage,
   saveFormToStorage,
-  saveGeneratedPrompt,
   saveLastOrder,
   saveUserToStorage,
 } from "@/lib/formStorage";
@@ -29,8 +26,8 @@ export default function GeneratePage() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [emailError, setEmailError] = useState<string | null>(null);
-  const [generatedPrompt, setGeneratedPrompt] = useState("");
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [isRedirecting, setIsRedirecting] = useState(false);
   const saveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -39,8 +36,6 @@ export default function GeneratePage() {
     const user = loadUserFromStorage();
     setFullName(user.fullName);
     setEmail(user.email);
-    const saved = loadGeneratedPrompt();
-    if (saved?.trim()) setGeneratedPrompt(saved.trim());
     setHasHydrated(true);
   }, []);
 
@@ -52,11 +47,15 @@ export default function GeneratePage() {
     };
   }, [form, hasHydrated]);
 
+  // Name, email, and the domain are remembered so the next visit starts filled in.
   useEffect(() => {
     if (!hasHydrated) return;
-    const timer = setTimeout(() => saveUserToStorage({ fullName, email }), 400);
+    const timer = setTimeout(
+      () => saveUserToStorage({ fullName, email, website: form.domainName }),
+      400
+    );
     return () => clearTimeout(timer);
-  }, [fullName, email, hasHydrated]);
+  }, [fullName, email, form.domainName, hasHydrated]);
 
   const update = useCallback(
     <K extends keyof FormState>(key: K, value: FormState[K]) => {
@@ -65,24 +64,19 @@ export default function GeneratePage() {
     []
   );
 
+  /** The example is a preview: it can be loaded and read, but never bought. */
+  const isExample = useMemo(() => isExampleForm(form), [form]);
+
+  const handleFillExample = useCallback(() => {
+    setForm({ ...EXAMPLE_FORM });
+    document.getElementById("wizard")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, []);
+
   const handleGenerate = useCallback(() => {
-    const prompt = buildPrompt(form);
-    setGeneratedPrompt(prompt);
-    saveGeneratedPrompt(prompt);
-    addToHistory({
-      id: crypto.randomUUID(),
-      title:
-        [form.primaryKw, form.pageType].filter(Boolean).join(" — ") ||
-        "Untitled prompt",
-      prompt,
-      createdAt: new Date().toISOString(),
-    });
-    requestAnimationFrame(() => {
-      document
-        .getElementById("result")
-        ?.scrollIntoView({ behavior: "smooth", block: "start" });
-    });
-  }, [form]);
+    setCheckoutError(null);
+    setEmailError(null);
+    setDialogOpen(true);
+  }, []);
 
   const handleCheckout = async () => {
     const trimmedEmail = email.trim();
@@ -100,7 +94,7 @@ export default function GeneratePage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          prompt: generatedPrompt.trim(),
+          prompt: buildPrompt(form),
           email: trimmedEmail,
           fullName: fullName.trim() || undefined,
           brandName: form.brandName.trim() || undefined,
@@ -135,7 +129,6 @@ export default function GeneratePage() {
     setForm(getDefaultFormState());
     setFullName("");
     setEmail("");
-    setGeneratedPrompt("");
     setCheckoutError(null);
     setEmailError(null);
     clearFormAndUserStorage();
@@ -146,14 +139,14 @@ export default function GeneratePage() {
       <div className="mx-auto max-w-4xl">
         <header className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <span className="pill">Step 1 — build your prompt</span>
+            <span className="pill">Describe your page</span>
             <h1 className="mt-4 text-3xl font-semibold tracking-tight sm:text-4xl">
-              Describe your page
+              Build your SEO prompt
             </h1>
             <p className="mt-2 max-w-xl text-sm text-muted-foreground">
-              Everything you enter stays in your browser until you choose to
-              continue. Only the two required fields are strictly needed — the
-              rest sharpen the output.
+              Everything you enter stays in your browser until you continue to
+              checkout. Only the two required fields are strictly needed — the rest
+              sharpen the output.
             </p>
           </div>
           <button
@@ -168,141 +161,35 @@ export default function GeneratePage() {
         </header>
 
         <div className="mt-8">
-          <StepWizard form={form} update={update} onGenerate={handleGenerate} />
+          <ExampleCard onFill={handleFillExample} filled={isExample} />
         </div>
 
-        {generatedPrompt && (
-          <section id="result" className="mt-16 scroll-mt-24">
-            <div className="flex flex-wrap items-end justify-between gap-3">
-              <div>
-                <span className="pill">Step 2 — your prompt</span>
-                <h2 className="mt-4 text-2xl font-semibold tracking-tight">
-                  Preview
-                </h2>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Read it, copy it, and download the formats you need.
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-6">
-              <PromptViewer
-                prompt={generatedPrompt}
-                brandName={form.brandName}
-                fullName={fullName}
-                email={email}
-              />
-            </div>
-
-            <div className="card-surface mt-10 overflow-hidden">
-              <div className="grid gap-0 md:grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)]">
-                <div className="border-b border-border p-6 md:border-b-0 md:border-r sm:p-8">
-                  <h3 className="text-lg font-semibold tracking-tight">
-                    Step 3 — get it delivered
-                  </h3>
-                  <p className="mt-1.5 text-sm text-muted-foreground">
-                    We email your prompt as a PDF and a Markdown file, and keep a
-                    permanent link you can reopen any time.
-                  </p>
-
-                  <div className="mt-6 grid gap-4 sm:grid-cols-2">
-                    <div className="space-y-2">
-                      <label htmlFor="checkout-name" className="field-label">
-                        Name
-                      </label>
-                      <input
-                        id="checkout-name"
-                        type="text"
-                        autoComplete="name"
-                        className="field-control"
-                        placeholder="Jane Doe"
-                        value={fullName}
-                        onChange={(event) => setFullName(event.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label htmlFor="checkout-email" className="field-label">
-                        Email <span className="text-destructive">*</span>
-                      </label>
-                      <input
-                        id="checkout-email"
-                        type="email"
-                        autoComplete="email"
-                        className="field-control"
-                        placeholder="jane@company.com"
-                        value={email}
-                        aria-invalid={Boolean(emailError) || undefined}
-                        aria-describedby={emailError ? "checkout-email-error" : undefined}
-                        onChange={(event) => {
-                          setEmail(event.target.value);
-                          if (emailError) setEmailError(null);
-                        }}
-                      />
-                      {emailError && (
-                        <p id="checkout-email-error" className="field-error" role="alert">
-                          {emailError}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={handleCheckout}
-                    disabled={isRedirecting || !generatedPrompt.trim()}
-                    className="btn btn-brand btn-lg mt-6 w-full"
-                  >
-                    {isRedirecting ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                        Opening secure checkout…
-                      </>
-                    ) : (
-                      <>
-                        Continue to checkout — {formatPrice()}
-                        <ArrowRight className="h-4 w-4" aria-hidden />
-                      </>
-                    )}
-                  </button>
-
-                  {checkoutError && (
-                    <p className="field-error mt-3" role="alert">
-                      {checkoutError}
-                    </p>
-                  )}
-
-                  <p className="field-hint mt-3 flex items-center gap-1.5">
-                    <ShieldCheck className="h-3.5 w-3.5 text-brand" aria-hidden />
-                    Hosted checkout. Card details never reach our servers.
-                  </p>
-                </div>
-
-                <div className="bg-surface-muted p-6 sm:p-8">
-                  <h4 className="field-label">Included</h4>
-                  <ul className="mt-4 space-y-2.5">
-                    {DELIVERABLES.map((item) => (
-                      <li
-                        key={item}
-                        className="flex items-start gap-2.5 text-sm leading-relaxed text-muted-foreground"
-                      >
-                        <span aria-hidden className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-brand" />
-                        {item}
-                      </li>
-                    ))}
-                  </ul>
-                  <p className="field-hint mt-6">
-                    Questions first?{" "}
-                    <Link href="/help" className="text-brand underline-offset-4 hover:underline">
-                      Read the help page
-                    </Link>
-                    .
-                  </p>
-                </div>
-              </div>
-            </div>
-          </section>
-        )}
+        <div className="mt-6">
+          <StepWizard
+            form={form}
+            update={update}
+            onGenerate={handleGenerate}
+            generateDisabled={isExample}
+            disabledReason="This is the example project. Change any field to your own details to unlock Generate."
+          />
+        </div>
       </div>
+
+      <ContactDialog
+        open={dialogOpen}
+        fullName={fullName}
+        email={email}
+        emailError={emailError}
+        submitError={checkoutError}
+        submitting={isRedirecting}
+        onFullNameChange={setFullName}
+        onEmailChange={(value) => {
+          setEmail(value);
+          if (emailError) setEmailError(null);
+        }}
+        onClose={() => setDialogOpen(false)}
+        onSubmit={handleCheckout}
+      />
     </div>
   );
 }

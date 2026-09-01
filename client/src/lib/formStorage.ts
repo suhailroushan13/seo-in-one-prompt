@@ -3,15 +3,17 @@ import { getDefaultFormState } from "./types";
 
 const FORM_DRAFT_KEY = "seo-prompt-form-draft";
 const USER_STORAGE_KEY = "seo-prompt-user";
-const GENERATED_PROMPT_KEY = "seo-prompt-generated";
+const LEGACY_GENERATED_PROMPT_KEY = "seo-prompt-generated";
 const LAST_ORDER_KEY = "seo-prompt-last-order";
 
 export interface StoredUser {
   fullName: string;
   email: string;
+  /** Last domain the buyer generated for, so the wizard can offer it again. */
+  website: string;
 }
 
-const defaultUser: StoredUser = { fullName: "", email: "" };
+const defaultUser: StoredUser = { fullName: "", email: "", website: "" };
 
 function readJson<T>(storage: Storage, key: string): Partial<T> | null {
   try {
@@ -32,7 +34,12 @@ function writeJson(storage: Storage, key: string, value: unknown): void {
 
 export function loadUserFromStorage(): StoredUser {
   if (typeof window === "undefined") return defaultUser;
-  return { ...defaultUser, ...(readJson<StoredUser>(localStorage, USER_STORAGE_KEY) ?? {}) };
+  const stored = readJson<StoredUser>(localStorage, USER_STORAGE_KEY) ?? {};
+  return {
+    fullName: String(stored.fullName ?? ""),
+    email: String(stored.email ?? ""),
+    website: String(stored.website ?? ""),
+  };
 }
 
 export function saveUserToStorage(user: StoredUser): void {
@@ -51,25 +58,6 @@ export function loadFormFromStorage(): FormState {
 export function saveFormToStorage(form: FormState): void {
   if (typeof window === "undefined") return;
   writeJson(localStorage, FORM_DRAFT_KEY, form);
-}
-
-/** Last generated prompt, so a refresh on /generate does not lose the result. */
-export function saveGeneratedPrompt(prompt: string): void {
-  if (typeof window === "undefined") return;
-  try {
-    localStorage.setItem(GENERATED_PROMPT_KEY, prompt);
-  } catch {
-    // ignore
-  }
-}
-
-export function loadGeneratedPrompt(): string | null {
-  if (typeof window === "undefined") return null;
-  try {
-    return localStorage.getItem(GENERATED_PROMPT_KEY);
-  } catch {
-    return null;
-  }
 }
 
 /**
@@ -109,13 +97,14 @@ export function clearLastOrder(): void {
   }
 }
 
-/** Clears the draft, the saved contact details, and the last generated prompt. */
+/** Clears the draft and the saved contact details. */
 export function clearFormAndUserStorage(): void {
   if (typeof window === "undefined") return;
   try {
     localStorage.removeItem(FORM_DRAFT_KEY);
     localStorage.removeItem(USER_STORAGE_KEY);
-    localStorage.removeItem(GENERATED_PROMPT_KEY);
+    // Older builds kept the generated prompt in the browser; drop it on clear.
+    localStorage.removeItem(LEGACY_GENERATED_PROMPT_KEY);
   } catch {
     // ignore
   }
